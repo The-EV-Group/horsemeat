@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -25,24 +26,30 @@ export default {
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					DEFAULT: '#2d4590',
+					foreground: '#f9fafb'
 				},
-				secondary: {
-					DEFAULT: 'hsl(var(--secondary))',
-					foreground: 'hsl(var(--secondary-foreground))'
+				accent: {
+					DEFAULT: '#7784ae',
+					hover: '#9b2a5c',
+					secondary: '#8b9acd',
+					foreground: '#f9fafb'
 				},
 				destructive: {
-					DEFAULT: 'hsl(var(--destructive))',
-					foreground: 'hsl(var(--destructive-foreground))'
+					DEFAULT: '#e11d48',
+					foreground: '#f9fafb'
+				},
+				success: {
+					DEFAULT: '#10b981',
+					foreground: '#f9fafb'
+				},
+				warning: {
+					DEFAULT: '#f59e0b',
+					foreground: '#f9fafb'
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
 					foreground: 'hsl(var(--muted-foreground))'
-				},
-				accent: {
-					DEFAULT: 'hsl(var(--accent))',
-					foreground: 'hsl(var(--accent-foreground))'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
@@ -62,6 +69,16 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
+			},
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
+			},
+			backgroundColor: {
+				app: '#eef3f6',
+			},
+			textColor: {
+				app: '#1f2937',
+				'app-dark': '#f9fafb',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

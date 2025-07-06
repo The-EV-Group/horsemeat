@@ -1,73 +1,147 @@
-# Welcome to your Lovable project
 
-## Project info
+# Horsemeat++ (EV Group Contractor CRM)
 
-**URL**: https://lovable.dev/projects/7fd21734-18a8-4503-ac47-76957a74e1cf
+A modern contractor relationship management system built with React, TypeScript, and Supabase.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Authentication**: Secure login/signup with Supabase Auth
+- **Contractor Management**: Comprehensive contractor profiles with skills, experience, and availability
+- **Keyword System**: Searchable, categorized skills and expertise tagging
+- **File Upload**: Resume storage with Supabase Storage
+- **Responsive Design**: Mobile-first design with sticky sidebar navigation
+- **Modern UI**: Built with shadcn/ui components and Tailwind CSS
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/7fd21734-18a8-4503-ac47-76957a74e1cf) and start prompting.
+- **Frontend**: React 18, TypeScript, Vite
+- **Backend**: Supabase (PostgreSQL, Auth, Storage)
+- **UI Framework**: Tailwind CSS, shadcn/ui
+- **Icons**: Lucide React
+- **Routing**: React Router v6
+- **State Management**: React Query (TanStack Query)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Getting Started
 
-**Use your preferred IDE**
+### Prerequisites
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Node.js 18+ 
+- npm or yarn
+- Supabase account
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Installation
 
-Follow these steps:
+1. **Clone the repository**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd horsemeat-plus-plus
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+3. **Environment Setup**
+   
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+4. **Database Setup**
+   
+   The application expects the following Supabase database schema (already configured):
+   - `contractor` - Main contractor information
+   - `keyword` - Skills, industries, certifications, etc.
+   - `contractor_keyword` - Many-to-many relationship
+   - `contractor_history` - Activity logging
+   - `contractor_task` - Task management
+   - `internal_employee` - User profiles
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+5. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+
+   The application will be available at `http://localhost:5173`
+
+## Project Structure
+
+```
+src/
+├── components/           # Reusable UI components
+│   ├── ui/              # shadcn/ui components (auto-generated)
+│   ├── Sidebar.tsx      # Main navigation
+│   ├── KeywordSelect.tsx # Multi-select keyword input
+│   ├── FormInput.tsx    # Form components with validation
+│   └── ...
+├── hooks/               # Custom React hooks
+│   ├── useAuth.tsx      # Authentication management
+│   ├── useKeywords.ts   # Keyword CRUD operations
+│   └── useContractors.ts # Contractor operations
+├── lib/                 # Utility libraries  
+│   └── supabase.ts      # Supabase client configuration
+├── pages/               # Route components
+│   ├── Login.tsx        # Authentication page
+│   ├── Dashboard.tsx    # Main dashboard
+│   ├── contractors/     # Contractor-related pages
+│   ├── keywords/        # Keyword management
+│   └── ...
+├── integrations/        # External service integrations
+│   └── supabase/        # Auto-generated types
+└── styles/              # Global styles
 ```
 
-**Edit a file directly in GitHub**
+## Key Features
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Navigation
+- Sticky sidebar with mobile hamburger menu
+- Auto-highlights current route
+- User profile section with sign-out
 
-**Use GitHub Codespaces**
+### Add Contractor Form
+- Comprehensive form covering all contractor attributes
+- File upload for resumes (PDF/Word documents)
+- Multi-category keyword selection with search and create
+- Responsive two-column layout
+- Form validation with error handling
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Keyword System
+- Searchable multi-select components
+- Categories: skills, industries, certifications, companies, job titles
+- Auto-complete with create-if-missing functionality
+- Real-time search with debouncing
 
-## What technologies are used for this project?
+### Authentication
+- Email/password signup and signin
+- Automatic employee record creation
+- Session persistence across page reloads
+- Protected route wrapper
 
-This project is built with:
+## Environment Variables
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `VITE_SUPABASE_URL` | Your Supabase project URL | Yes |
+| `VITE_SUPABASE_ANON_KEY` | Your Supabase anonymous key | Yes |
 
-## How can I deploy this project?
+## Available Scripts
 
-Simply open [Lovable](https://lovable.dev/projects/7fd21734-18a8-4503-ac47-76957a74e1cf) and click on Share -> Publish.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
 
-## Can I connect a custom domain to my Lovable project?
+## Contributing
 
-Yes, you can!
+1. Follow the existing code style and patterns
+2. Use TypeScript for all new code
+3. Add proper error handling and loading states
+4. Test forms and authentication flows
+5. Ensure responsive design on mobile devices
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## License
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+This project is proprietary software for EV Group.
