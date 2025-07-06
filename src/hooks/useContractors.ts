@@ -5,19 +5,35 @@ import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type Contractor = Tables<'contractor'>;
 type ContractorInsert = TablesInsert<'contractor'>;
-type ContractorKeyword = Tables<'contractor_keyword'>;
 
 export function useContractors() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const createContractor = async (
-    contractorData: Omit<ContractorInsert, 'id' | 'inserted_at'>,
+    contractorData: ContractorInsert,
     keywords: { keyword_id: string; note?: string }[] = []
-  ) => {
+  ): Promise<Contractor> => {
     try {
       setLoading(true);
       setError(null);
+
+      // Check for duplicate email
+      if (contractorData.email) {
+        const { data: existingContractor, error: checkError } = await supabase
+          .from('contractor')
+          .select('id')
+          .eq('email', contractorData.email)
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('Error checking for duplicate email:', checkError);
+        }
+
+        if (existingContractor) {
+          throw new Error('A contractor with this email already exists');
+        }
+      }
 
       // Insert contractor
       const { data: contractor, error: contractorError } = await supabase
@@ -28,7 +44,7 @@ export function useContractors() {
 
       if (contractorError) throw contractorError;
 
-      // Insert contractor keywords if any
+      // Insert contractor keywords if any (in a separate transaction-like operation)
       if (keywords.length > 0) {
         const keywordInserts = keywords.map((kw, index) => ({
           contractor_id: contractor.id,
@@ -43,7 +59,8 @@ export function useContractors() {
 
         if (keywordError) {
           console.error('Error inserting keywords:', keywordError);
-          // Don't fail the whole operation for keyword errors
+          // Don't fail the whole operation for keyword errors, but log them
+          console.warn('Contractor created but some keywords failed to save');
         }
       }
 
@@ -57,7 +74,7 @@ export function useContractors() {
     }
   };
 
-  const uploadResume = async (file: File) => {
+  const uploadResume = async (file: File): Promise<string> => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;

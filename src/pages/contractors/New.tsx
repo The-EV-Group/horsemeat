@@ -1,6 +1,9 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useContractors } from '@/hooks/useContractors';
 import { KeywordSelect } from '@/components/KeywordSelect';
 import { FormInput, FormTextarea } from '@/components/FormInput';
@@ -11,63 +14,101 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Loader2 } from 'lucide-react';
-import type { Tables } from '@/integrations/supabase/types';
+import { Progress } from '@/components/ui/progress';
+import { Upload, Loader2, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import type { Tables, TablesInsert, Enums } from '@/integrations/supabase/types';
 
 type Keyword = Tables<'keyword'>;
+type ContractorInsert = TablesInsert<'contractor'>;
+type ContactMethod = Enums<'contact_method'>;
 
-const TIMEZONES = [
-  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-  'America/Phoenix', 'America/Anchorage', 'Pacific/Honolulu'
-];
-
-const STATES = [
+const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',  
   'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
   'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
 ];
 
+const contractorSchema = z.object({
+  // Basic info
+  full_name: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Invalid email format'),
+  phone: z.string().regex(/^\+?[\d\s\(\)\-]{10,15}$/, 'Phone must be 10-15 digits'),
+  
+  // Location
+  city: z.string().optional(),
+  state: z.string().optional(),
+  
+  // Contact preference
+  preferred_contact: z.enum(['email', 'phone', 'text']),
+  
+  // Travel
+  travel_anywhere: z.boolean(),
+  travel_radius_miles: z.number().min(1, 'Travel radius must be greater than 0').optional(),
+  
+  // Pay
+  pay_type: z.enum(['W2', '1099']),
+  prefers_hourly: z.boolean(),
+  hourly_rate: z.number().min(0).optional(),
+  salary_lower: z.number().min(0).optional(),
+  salary_higher: z.number().min(0).optional(),
+  
+  // Flags
+  star_candidate: z.boolean(),
+  available: z.boolean(),
+  
+  // Notes
+  notes: z.string().optional(),
+  candidate_summary: z.string().optional(),
+})
+.refine((data) => {
+  if (!data.travel_anywhere && !data.travel_radius_miles) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Travel radius is required when not willing to travel anywhere",
+  path: ["travel_radius_miles"]
+})
+.refine((data) => {
+  if (data.prefers_hourly && !data.hourly_rate) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Hourly rate is required",
+  path: ["hourly_rate"]
+})
+.refine((data) => {
+  if (!data.prefers_hourly && (!data.salary_lower || !data.salary_higher)) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Salary range is required",
+  path: ["salary_lower"]
+})
+.refine((data) => {
+  if (!data.prefers_hourly && data.salary_lower && data.salary_higher && data.salary_lower > data.salary_higher) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Minimum salary must be less than or equal to maximum salary",
+  path: ["salary_lower"]
+});
+
+type ContractorFormData = z.infer<typeof contractorSchema>;
+
 export default function NewContractor() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { createContractor, uploadResume, loading, error } = useContractors();
 
-  // Form state
-  const [formData, setFormData] = useState({
-    // Candidate flags
-    star_candidate: false,
-    available: true,
-    pay_type: 'W2' as 'W2' | '1099',
-    
-    // Basic info
-    full_name: '',
-    email: '',
-    phone: '',
-    timezone: '',
-    
-    // Address
-    street: '',
-    extended: '',
-    city: '',
-    state: '',
-    postal: '',
-    
-    // Pay preference
-    prefers_hourly: true,
-    hourly_rate: '',
-    salary_lower: '',
-    salary_higher: '',
-    
-    // Additional info
-    notes: '',
-    preferred_contact: 'email' as 'email' | 'text' | 'phone',
-    travel_anywhere: false,
-    travel_radius_miles: '',
-    candidate_summary: '',
-  });
-
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [keywords, setKeywords] = useState({
     skills: [] as Keyword[],
     industries: [] as Keyword[],
@@ -75,105 +116,89 @@ export default function NewContractor() {
     companies: [] as Keyword[],
     'job titles': [] as Keyword[],
   });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isValid, isSubmitting }
+  } = useForm<ContractorFormData>({
+    resolver: zodResolver(contractorSchema),
+    defaultValues: {
+      star_candidate: false,
+      available: true,
+      pay_type: 'W2',
+      prefers_hourly: true,
+      preferred_contact: 'email',
+      travel_anywhere: false,
+    },
+    mode: 'onChange'
+  });
+
+  const watchedValues = watch();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!allowedTypes.includes(file.type)) {
-        setFormErrors(prev => ({ ...prev, resume: 'Please upload a PDF or Word document' }));
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a PDF or Word document",
+          variant: "destructive"
+        });
         return;
       }
       
-      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
-        setFormErrors(prev => ({ ...prev, resume: 'File size must be less than 5MB' }));
+        toast({
+          title: "File too large",
+          description: "File size must be less than 5MB",
+          variant: "destructive"
+        });
         return;
       }
       
       setResumeFile(file);
-      setFormErrors(prev => ({ ...prev, resume: '' }));
     }
   };
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    
-    if (!formData.full_name.trim()) errors.full_name = 'Full name is required';
-    if (!formData.email.trim()) errors.email = 'Email is required';
-    if (!formData.phone.trim()) errors.phone = 'Phone is required';
-    
-    if (formData.prefers_hourly && !formData.hourly_rate) {
-      errors.hourly_rate = 'Hourly rate is required';
-    } else if (!formData.prefers_hourly && (!formData.salary_lower || !formData.salary_higher)) {
-      errors.salary_range = 'Salary range is required';
-    }
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  const removeFile = () => {
+    setResumeFile(null);
+    setUploadProgress(0);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
+  const onSubmit = async (data: ContractorFormData) => {
     try {
-      setSubmitting(true);
-      
-      // Upload resume if provided
       let resumeUrl = '';
+      
       if (resumeFile) {
+        setUploadProgress(10);
         resumeUrl = await uploadResume(resumeFile);
+        setUploadProgress(100);
       }
       
-      // Prepare travel preferences and contact preference for notes
-      const additionalNotes = [];
-      if (formData.preferred_contact !== 'email') {
-        additionalNotes.push(`Preferred contact: ${formData.preferred_contact}`);
-      }
-      if (formData.travel_anywhere) {
-        additionalNotes.push('Willing to travel anywhere');
-      } else if (formData.travel_radius_miles) {
-        additionalNotes.push(`Travel radius: ${formData.travel_radius_miles} miles`);
-      }
-      
-      const combinedNotes = [
-        formData.notes,
-        ...additionalNotes,
-        formData.candidate_summary,
-      ].filter(Boolean).join('\n\n');
-      
-      // Prepare contractor data
-      const contractorData = {
-        full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        star_candidate: formData.star_candidate,
-        available: formData.available,
-        pay_type: formData.pay_type,
-        prefers_hourly: formData.prefers_hourly,
-        hourly_rate: formData.prefers_hourly ? parseFloat(formData.hourly_rate) || null : null,
-        salary_lower: !formData.prefers_hourly ? parseFloat(formData.salary_lower) || null : null,
-        salary_higher: !formData.prefers_hourly ? parseFloat(formData.salary_higher) || null : null,
-        notes: combinedNotes || null,
+      const contractorData: ContractorInsert = {
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone,
+        city: data.city || null,
+        state: data.state || null,
+        preferred_contact: data.preferred_contact,
+        travel_anywhere: data.travel_anywhere,
+        travel_radius_miles: data.travel_anywhere ? null : data.travel_radius_miles!,
+        pay_type: data.pay_type,
+        prefers_hourly: data.prefers_hourly,
+        hourly_rate: data.prefers_hourly ? data.hourly_rate! : null,
+        salary_lower: !data.prefers_hourly ? data.salary_lower! : null,
+        salary_higher: !data.prefers_hourly ? data.salary_higher! : null,
+        star_candidate: data.star_candidate,
+        available: data.available,
+        notes: [data.notes, data.candidate_summary].filter(Boolean).join('\n\n') || null,
         resume_url: resumeUrl || null,
       };
       
-      // Prepare keywords for insertion
       const allKeywords = [
         ...keywords.skills,
         ...keywords.industries,
@@ -182,17 +207,22 @@ export default function NewContractor() {
         ...keywords['job titles'],
       ].map(keyword => ({ keyword_id: keyword.id }));
       
-      await createContractor(contractorData, allKeywords);
+      const newContractor = await createContractor(contractorData, allKeywords);
       
-      // Navigate to success page or dashboard
-      navigate('/dashboard', { 
-        state: { message: 'Contractor created successfully!' }
+      toast({
+        title: "Success",
+        description: "Contractor created successfully!",
       });
+      
+      navigate(`/contractors/${newContractor.id}`);
       
     } catch (err) {
       console.error('Error creating contractor:', err);
-    } finally {
-      setSubmitting(false);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to create contractor',
+        variant: "destructive"
+      });
     }
   };
 
@@ -209,7 +239,7 @@ export default function NewContractor() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         {/* Candidate Flags */}
         <Card className="shadow-soft">
           <CardHeader>
@@ -217,12 +247,12 @@ export default function NewContractor() {
             <CardDescription>Key attributes and employment type</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="star_candidate"
-                  checked={formData.star_candidate}
-                  onCheckedChange={(checked) => handleInputChange('star_candidate', checked)}
+                  checked={watchedValues.star_candidate}
+                  onCheckedChange={(checked) => setValue('star_candidate', !!checked)}
                 />
                 <Label htmlFor="star_candidate" className="text-sm font-medium">
                   ⭐ Star Candidate
@@ -232,8 +262,8 @@ export default function NewContractor() {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="available"
-                  checked={formData.available}
-                  onCheckedChange={(checked) => handleInputChange('available', checked)}
+                  checked={watchedValues.available}
+                  onCheckedChange={(checked) => setValue('available', !!checked)}
                 />
                 <Label htmlFor="available" className="text-sm font-medium">
                   Currently Available
@@ -246,8 +276,8 @@ export default function NewContractor() {
                 Employment Type *
               </Label>
               <RadioGroup
-                value={formData.pay_type}
-                onValueChange={(value) => handleInputChange('pay_type', value as 'W2' | '1099')}
+                value={watchedValues.pay_type}
+                onValueChange={(value) => setValue('pay_type', value as 'W2' | '1099')}
                 className="flex space-x-6"
               >
                 <div className="flex items-center space-x-2">
@@ -289,12 +319,22 @@ export default function NewContractor() {
                 PDF, DOC, or DOCX up to 5MB
               </p>
               {resumeFile && (
-                <p className="text-sm text-primary mt-2">
-                  ✓ {resumeFile.name}
-                </p>
-              )}
-              {formErrors.resume && (
-                <p className="text-sm text-destructive mt-2">{formErrors.resume}</p>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm text-primary">
+                    <span>✓ {resumeFile.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeFile}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <Progress value={uploadProgress} className="w-full" />
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
@@ -309,9 +349,8 @@ export default function NewContractor() {
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
               label="Full Name"
-              value={formData.full_name}
-              onChange={(e) => handleInputChange('full_name', e.target.value)}
-              error={formErrors.full_name}
+              {...register('full_name')}
+              error={errors.full_name?.message}
               required
               placeholder="John Doe"
             />
@@ -319,9 +358,8 @@ export default function NewContractor() {
             <FormInput
               label="Email"
               type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              error={formErrors.email}
+              {...register('email')}
+              error={errors.email?.message}
               required
               placeholder="john@example.com"
             />
@@ -329,25 +367,61 @@ export default function NewContractor() {
             <FormInput
               label="Phone"
               type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              error={formErrors.phone}
+              {...register('phone')}
+              error={errors.phone?.message}
               required
               placeholder="(555) 123-4567"
             />
             
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">
-                Time Zone
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-3 block">
+                Preferred Contact Method
               </Label>
-              <Select value={formData.timezone} onValueChange={(value) => handleInputChange('timezone', value)}>
+              <RadioGroup
+                value={watchedValues.preferred_contact}
+                onValueChange={(value) => setValue('preferred_contact', value as ContactMethod)}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="email" id="contact-email" />
+                  <Label htmlFor="contact-email">Email</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="phone" id="contact-phone" />
+                  <Label htmlFor="contact-phone">Phone</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="text" id="contact-text" />
+                  <Label htmlFor="contact-text">Text</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Location */}
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle>Location</CardTitle>
+            <CardDescription>Geographic information</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput
+              label="City"
+              {...register('city')}
+              placeholder="New York"
+            />
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">State</Label>
+              <Select value={watchedValues.state} onValueChange={(value) => setValue('state', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select timezone" />
+                  <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TIMEZONES.map((tz) => (
-                    <SelectItem key={tz} value={tz}>
-                      {tz.replace('_', ' ')}
+                  {US_STATES.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -356,58 +430,37 @@ export default function NewContractor() {
           </CardContent>
         </Card>
 
-        {/* Address */}
+        {/* Travel Preferences */}
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle>Address</CardTitle>
-            <CardDescription>Physical location information</CardDescription>
+            <CardTitle>Travel Preferences</CardTitle>
+            <CardDescription>Willingness to travel for work</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <FormInput
-                label="Street Address"
-                value={formData.street}
-                onChange={(e) => handleInputChange('street', e.target.value)}
-                placeholder="123 Main St"
+          <CardContent className="space-y-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="travel_anywhere"
+                checked={watchedValues.travel_anywhere}
+                onCheckedChange={(checked) => setValue('travel_anywhere', !!checked)}
               />
+              <Label htmlFor="travel_anywhere" className="text-sm font-medium">
+                Willing to travel anywhere
+              </Label>
             </div>
             
-            <FormInput
-              label="Apt/Suite/Unit"
-              value={formData.extended}
-              onChange={(e) => handleInputChange('extended', e.target.value)}
-              placeholder="Apt 4B"
-            />
-            
-            <FormInput
-              label="City"
-              value={formData.city}
-              onChange={(e) => handleInputChange('city', e.target.value)}
-              placeholder="New York"
-            />
-            
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">State</Label>
-              <Select value={formData.state} onValueChange={(value) => handleInputChange('state', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATES.map((state) => (
-                    <SelectItem key={state} value={state}>
-                      {state}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <FormInput
-              label="Postal Code"
-              value={formData.postal}
-              onChange={(e) => handleInputChange('postal', e.target.value)}
-              placeholder="10001"
-            />
+            {!watchedValues.travel_anywhere && (
+              <div className="max-w-xs">
+                <FormInput
+                  label="Travel Radius (miles)"
+                  type="number"
+                  {...register('travel_radius_miles', { valueAsNumber: true })}
+                  error={errors.travel_radius_miles?.message}
+                  placeholder="50"
+                  helperText="Maximum distance willing to travel"
+                  required
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -423,8 +476,8 @@ export default function NewContractor() {
                 Pay Preference *
               </Label>
               <RadioGroup
-                value={formData.prefers_hourly ? 'hourly' : 'salary'}
-                onValueChange={(value) => handleInputChange('prefers_hourly', value === 'hourly')}
+                value={watchedValues.prefers_hourly ? 'hourly' : 'salary'}
+                onValueChange={(value) => setValue('prefers_hourly', value === 'hourly')}
                 className="flex space-x-6"
               >
                 <div className="flex items-center space-x-2">
@@ -438,15 +491,14 @@ export default function NewContractor() {
               </RadioGroup>
             </div>
             
-            {formData.prefers_hourly ? (
+            {watchedValues.prefers_hourly ? (
               <div className="max-w-xs">
                 <FormInput
                   label="Hourly Rate"
                   type="number"
                   step="0.01"
-                  value={formData.hourly_rate}
-                  onChange={(e) => handleInputChange('hourly_rate', e.target.value)}
-                  error={formErrors.hourly_rate}
+                  {...register('hourly_rate', { valueAsNumber: true })}
+                  error={errors.hourly_rate?.message}
                   required
                   placeholder="65.00"
                 />
@@ -456,93 +508,17 @@ export default function NewContractor() {
                 <FormInput
                   label="Minimum Salary"
                   type="number"
-                  value={formData.salary_lower}
-                  onChange={(e) => handleInputChange('salary_lower', e.target.value)}
-                  error={formErrors.salary_range}
+                  {...register('salary_lower', { valueAsNumber: true })}
+                  error={errors.salary_lower?.message}
                   required
                   placeholder="80000"
                 />
                 <FormInput
                   label="Maximum Salary"
                   type="number"
-                  value={formData.salary_higher}
-                  onChange={(e) => handleInputChange('salary_higher', e.target.value)}
+                  {...register('salary_higher', { valueAsNumber: true })}
                   required
                   placeholder="120000"
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Additional Info */}
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
-            <CardDescription>Goals, interests, and preferences</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <FormTextarea
-              label="Goals / Interests"
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              placeholder="What are their career goals and interests?"
-              helperText="Optional notes about the contractor's aspirations"
-            />
-            
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">
-                Preferred Contact Method
-              </Label>
-              <RadioGroup
-                value={formData.preferred_contact}
-                onValueChange={(value) => handleInputChange('preferred_contact', value)}
-                className="flex space-x-6"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="email" id="contact-email" />
-                  <Label htmlFor="contact-email">Email</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="text" id="contact-text" />
-                  <Label htmlFor="contact-text">Text Message</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="phone" id="contact-phone" />
-                  <Label htmlFor="contact-phone">Phone Call</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Travel Preferences */}
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle>Travel Preferences</CardTitle>
-            <CardDescription>Willingness to travel for work</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="travel_anywhere"
-                checked={formData.travel_anywhere}
-                onCheckedChange={(checked) => handleInputChange('travel_anywhere', checked)}
-              />
-              <Label htmlFor="travel_anywhere" className="text-sm font-medium">
-                Willing to travel anywhere
-              </Label>
-            </div>
-            
-            {!formData.travel_anywhere && (
-              <div className="max-w-xs">
-                <FormInput
-                  label="Travel Radius (miles)"
-                  type="number"
-                  value={formData.travel_radius_miles}
-                  onChange={(e) => handleInputChange('travel_radius_miles', e.target.value)}
-                  placeholder="50"
-                  helperText="Maximum distance willing to travel"
                 />
               </div>
             )}
@@ -572,20 +548,26 @@ export default function NewContractor() {
           </CardContent>
         </Card>
 
-        {/* Candidate Summary */}
+        {/* Additional Info */}
         <Card className="shadow-soft">
           <CardHeader>
-            <CardTitle>Candidate Summary</CardTitle>
-            <CardDescription>Overall assessment and notes</CardDescription>
+            <CardTitle>Additional Information</CardTitle>
+            <CardDescription>Goals, interests, and overall assessment</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <FormTextarea
-              label="Summary"
-              value={formData.candidate_summary}
-              onChange={(e) => handleInputChange('candidate_summary', e.target.value)}
+              label="Goals / Interests"
+              {...register('notes')}
+              placeholder="What are their career goals and interests?"
+              helperText="Optional notes about the contractor's aspirations"
+            />
+            
+            <FormTextarea
+              label="Candidate Summary"
+              {...register('candidate_summary')}
               placeholder="Provide an overall summary of this contractor..."
               className="min-h-[120px]"
-              helperText="This will be added to the contractor's notes"
+              helperText="Overall assessment and notes"
             />
           </CardContent>
         </Card>
@@ -596,16 +578,16 @@ export default function NewContractor() {
             type="button"
             variant="outline"
             onClick={() => navigate(-1)}
-            disabled={submitting}
+            disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button
             type="submit"
             className="bg-primary hover:bg-primary/90"
-            disabled={submitting || loading}
+            disabled={!isValid || isSubmitting || loading}
           >
-            {submitting ? (
+            {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...

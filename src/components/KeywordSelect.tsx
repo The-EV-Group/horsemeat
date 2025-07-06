@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Check, X, Plus, ChevronDown } from 'lucide-react';
 import { useKeywords } from '@/hooks/useKeywords';
@@ -69,7 +68,7 @@ export function KeywordSelect({
       onChange([...value, keyword]);
     }
     setSearchTerm('');
-    setIsOpen(false);
+    // Keep dropdown open for multiple selections
     inputRef.current?.focus();
   };
 
@@ -106,6 +105,23 @@ export function KeywordSelect({
         handleCreateKeyword();
       }
     }
+  };
+
+  const handleBlur = async () => {
+    // Small delay to allow for click events to process
+    setTimeout(async () => {
+      if (searchTerm.trim() && !searchResults.find(k => k.name.toLowerCase() === searchTerm.toLowerCase())) {
+        try {
+          setIsCreating(true);
+          const newKeyword = await createKeyword(searchTerm.trim(), category);
+          handleSelect(newKeyword);
+        } catch (err) {
+          console.error('Error creating keyword:', err);
+        } finally {
+          setIsCreating(false);
+        }
+      }
+    }, 150);
   };
 
   const exactMatch = searchResults.find(
@@ -150,6 +166,7 @@ export function KeywordSelect({
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             placeholder={`Search ${category.toLowerCase()}...`}
             className={cn(
               'pr-8',
