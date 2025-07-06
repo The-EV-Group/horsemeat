@@ -47,14 +47,14 @@ const contractorSchema = z.object({
   
   // Travel
   travel_anywhere: z.boolean(),
-  travel_radius_miles: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(1, 'Travel radius must be greater than 0').optional()),
+  travel_radius_miles: z.number().optional(),
   
   // Pay
   pay_type: z.enum(['W2', '1099']),
   prefers_hourly: z.boolean(),
-  hourly_rate: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(0).optional()),
-  salary_lower: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(0).optional()),
-  salary_higher: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(0).optional()),
+  hourly_rate: z.number().optional(),
+  salary_lower: z.number().optional(),
+  salary_higher: z.number().optional(),
   
   // Flags
   star_candidate: z.boolean(),
@@ -63,23 +63,42 @@ const contractorSchema = z.object({
   // Notes
   notes: z.string().optional(),
   candidate_summary: z.string().optional(),
-}).superRefine((data, ctx) => {
-  // Travel
-  if (!data.travel_anywhere && !data.travel_radius_miles) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Travel radius is required when not willing to travel anywhere', path: ['travel_radius_miles'] });
+}).refine((data) => {
+  // Travel validation
+  if (!data.travel_anywhere && (!data.travel_radius_miles || data.travel_radius_miles <= 0)) {
+    return false;
   }
-  // Pay
-  if (data.prefers_hourly) {
-    if (!data.hourly_rate) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Hourly rate is required', path: ['hourly_rate'] });
-    }
-  } else {
-    if (!data.salary_lower || !data.salary_higher) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Salary range is required', path: ['salary_lower'] });
-    } else if (data.salary_lower > data.salary_higher) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Minimum salary must be less than or equal to maximum salary', path: ['salary_lower'] });
-    }
+  return true;
+}, {
+  message: 'Travel radius is required when not willing to travel anywhere',
+  path: ['travel_radius_miles'],
+}).refine((data) => {
+  // Pay validation
+  if (data.prefers_hourly && (!data.hourly_rate || data.hourly_rate <= 0)) {
+    return false;
   }
+  return true;
+}, {
+  message: 'Hourly rate is required',
+  path: ['hourly_rate'],
+}).refine((data) => {
+  // Salary validation
+  if (!data.prefers_hourly && (!data.salary_lower || !data.salary_higher)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Salary range is required',
+  path: ['salary_lower'],
+}).refine((data) => {
+  // Salary range validation
+  if (!data.prefers_hourly && data.salary_lower && data.salary_higher && data.salary_lower > data.salary_higher) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Minimum salary must be less than or equal to maximum salary',
+  path: ['salary_lower'],
 });
 
 type ContractorFormData = z.infer<typeof contractorSchema>;
@@ -170,12 +189,12 @@ export default function NewContractor() {
         state: data.state || null,
         preferred_contact: data.preferred_contact,
         travel_anywhere: data.travel_anywhere,
-        travel_radius_miles: data.travel_anywhere ? null : data.travel_radius_miles!,
+        travel_radius_miles: data.travel_anywhere ? null : data.travel_radius_miles || null,
         pay_type: data.pay_type,
         prefers_hourly: data.prefers_hourly,
-        hourly_rate: data.prefers_hourly ? data.hourly_rate! : null,
-        salary_lower: !data.prefers_hourly ? data.salary_lower! : null,
-        salary_higher: !data.prefers_hourly ? data.salary_higher! : null,
+        hourly_rate: data.prefers_hourly ? data.hourly_rate || null : null,
+        salary_lower: !data.prefers_hourly ? data.salary_lower || null : null,
+        salary_higher: !data.prefers_hourly ? data.salary_higher || null : null,
         star_candidate: data.star_candidate,
         available: data.available,
         notes: [data.notes, data.candidate_summary].filter(Boolean).join('\n\n') || null,
