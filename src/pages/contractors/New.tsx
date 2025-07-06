@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useContractors } from '@/hooks/useContractors';
+import { useKeywords } from '@/hooks/useKeywords';
 import { KeywordSelect } from '@/components/KeywordSelect';
 import { FormInput, FormTextarea } from '@/components/FormInput';
 import { Button } from '@/components/ui/button';
@@ -46,14 +47,14 @@ const contractorSchema = z.object({
   
   // Travel
   travel_anywhere: z.boolean(),
-  travel_radius_miles: z.number().min(1, 'Travel radius must be greater than 0').optional(),
+  travel_radius_miles: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(1, 'Travel radius must be greater than 0').optional()),
   
   // Pay
   pay_type: z.enum(['W2', '1099']),
   prefers_hourly: z.boolean(),
-  hourly_rate: z.number().min(0).optional(),
-  salary_lower: z.number().min(0).optional(),
-  salary_higher: z.number().min(0).optional(),
+  hourly_rate: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(0).optional()),
+  salary_lower: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(0).optional()),
+  salary_higher: z.preprocess(v => v === '' ? undefined : Number(v), z.number().min(0).optional()),
   
   // Flags
   star_candidate: z.boolean(),
@@ -62,42 +63,23 @@ const contractorSchema = z.object({
   // Notes
   notes: z.string().optional(),
   candidate_summary: z.string().optional(),
-})
-.refine((data) => {
+}).superRefine((data, ctx) => {
+  // Travel
   if (!data.travel_anywhere && !data.travel_radius_miles) {
-    return false;
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Travel radius is required when not willing to travel anywhere', path: ['travel_radius_miles'] });
   }
-  return true;
-}, {
-  message: "Travel radius is required when not willing to travel anywhere",
-  path: ["travel_radius_miles"]
-})
-.refine((data) => {
-  if (data.prefers_hourly && !data.hourly_rate) {
-    return false;
+  // Pay
+  if (data.prefers_hourly) {
+    if (!data.hourly_rate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Hourly rate is required', path: ['hourly_rate'] });
+    }
+  } else {
+    if (!data.salary_lower || !data.salary_higher) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Salary range is required', path: ['salary_lower'] });
+    } else if (data.salary_lower > data.salary_higher) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Minimum salary must be less than or equal to maximum salary', path: ['salary_lower'] });
+    }
   }
-  return true;
-}, {
-  message: "Hourly rate is required",
-  path: ["hourly_rate"]
-})
-.refine((data) => {
-  if (!data.prefers_hourly && (!data.salary_lower || !data.salary_higher)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Salary range is required",
-  path: ["salary_lower"]
-})
-.refine((data) => {
-  if (!data.prefers_hourly && data.salary_lower && data.salary_higher && data.salary_lower > data.salary_higher) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Minimum salary must be less than or equal to maximum salary",
-  path: ["salary_lower"]
 });
 
 type ContractorFormData = z.infer<typeof contractorSchema>;
@@ -106,6 +88,7 @@ export default function NewContractor() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { createContractor, uploadResume, loading, error } = useContractors();
+  const { createKeyword } = useKeywords();
 
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -199,13 +182,26 @@ export default function NewContractor() {
         resume_url: resumeUrl || null,
       };
       
-      const allKeywords = [
+      // Resolve keyword IDs; create any local placeholders
+      const selectedKeywords = [
         ...keywords.skills,
         ...keywords.industries,
         ...keywords.certifications,
         ...keywords.companies,
         ...keywords['job titles'],
-      ].map(keyword => ({ keyword_id: keyword.id }));
+      ];
+
+      const allKeywordsPromises = selectedKeywords.map(async (kw) => {
+        // local placeholder ids are prefixed with 'local-'
+        if (kw.id && !kw.id.startsWith('local-')) {
+          return { keyword_id: kw.id };
+        }
+        // create in DB
+        const inserted = await createKeyword(kw.name, kw.category);
+        return { keyword_id: inserted.id };
+      });
+
+      const allKeywords = await Promise.all(allKeywordsPromises);
       
       const newContractor = await createContractor(contractorData, allKeywords);
       

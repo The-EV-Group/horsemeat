@@ -5,6 +5,20 @@ import type { Tables } from '@/integrations/supabase/types';
 
 type Keyword = Tables<'keyword'>;
 
+// UI string ➜ database enum mapping
+const CATEGORY_MAP: Record<string, string> = {
+  skills: 'skill',
+  industries: 'industry',
+  certifications: 'certification',
+  companies: 'company',
+  'job titles': 'job_title',
+};
+
+function normalizeCategory(cat?: string): string | undefined {
+  if (!cat) return undefined;
+  return CATEGORY_MAP[cat] ?? cat;
+}
+
 export function useKeywords(category?: string) {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,13 +31,14 @@ export function useKeywords(category?: string) {
   const fetchKeywords = async () => {
     try {
       setLoading(true);
+      const dbCategory = normalizeCategory(category);
       let query = supabase
         .from('keyword')
         .select('*')
         .order('name');
 
-      if (category) {
-        query = query.eq('category', category);
+      if (dbCategory) {
+        query = query.eq('category', dbCategory);
       }
 
       const { data, error } = await query;
@@ -39,6 +54,7 @@ export function useKeywords(category?: string) {
 
   const searchKeywords = async (searchTerm: string, category?: string) => {
     try {
+      const dbCategory = normalizeCategory(category);
       let query = supabase
         .from('keyword')
         .select('*')
@@ -46,8 +62,8 @@ export function useKeywords(category?: string) {
         .order('name')
         .limit(10);
 
-      if (category) {
-        query = query.eq('category', category);
+      if (dbCategory) {
+        query = query.eq('category', dbCategory);
       }
 
       const { data, error } = await query;
@@ -60,10 +76,15 @@ export function useKeywords(category?: string) {
   };
 
   const createKeyword = async (name: string, category: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Keyword cannot be empty');
+
+    const dbCategory = normalizeCategory(category);
+
     try {
       const { data, error } = await supabase
         .from('keyword')
-        .insert({ name: name.trim(), category })
+        .insert({ name: trimmed, category: dbCategory })
         .select()
         .single();
 

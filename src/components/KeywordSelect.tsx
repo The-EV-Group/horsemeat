@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Check, X, Plus, ChevronDown } from 'lucide-react';
 import { useKeywords } from '@/hooks/useKeywords';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Keyword = Tables<'keyword'>;
@@ -33,8 +35,10 @@ export function KeywordSelect({
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Keyword[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  // flag to skip blur auto-create right after a selection
+  const justSelected = useRef(false);
   
-  const { searchKeywords, createKeyword } = useKeywords();
+  const { searchKeywords } = useKeywords();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +68,7 @@ export function KeywordSelect({
   }, [searchTerm, category, searchKeywords]);
 
   const handleSelect = (keyword: Keyword) => {
+    justSelected.current = true;
     if (!value.find(k => k.id === keyword.id)) {
       onChange([...value, keyword]);
     }
@@ -77,30 +82,35 @@ export function KeywordSelect({
   };
 
   const handleCreateKeyword = async () => {
-    if (!searchTerm.trim() || isCreating) return;
-    
-    try {
-      setIsCreating(true);
-      const newKeyword = await createKeyword(searchTerm.trim(), category);
-      handleSelect(newKeyword);
-    } catch (err) {
-      console.error('Error creating keyword:', err);
-    } finally {
-      setIsCreating(false);
+    const trimmedTerm = searchTerm.trim();
+    if (!trimmedTerm || isCreating) return;
+
+    // prevent duplicate in current selection
+    if (value.some(k => k.name.toLowerCase() === trimmedTerm.toLowerCase())) {
+      setSearchTerm('');
+      return;
     }
+
+    // create local placeholder keyword (not persisted yet)
+    const placeholder: Keyword = {
+      id: `local-${crypto.randomUUID()}`,
+      name: trimmedTerm,
+      category,
+    } as Keyword;
+    handleSelect(placeholder);
+    setSearchTerm('');
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      
-      // Check if exact match exists
-      const exactMatch = searchResults.find(
-        k => k.name.toLowerCase() === searchTerm.toLowerCase()
-      );
-      
+      const trimmedTerm = searchTerm.trim();
+      if (!trimmedTerm) return;
+      // Prioritize exact or first search result
       if (exactMatch) {
         handleSelect(exactMatch);
+      } else if (searchResults.length > 0) {
+        handleSelect(searchResults[0]);
       } else {
         handleCreateKeyword();
       }
@@ -108,18 +118,34 @@ export function KeywordSelect({
   };
 
   const handleBlur = async () => {
+    if (justSelected.current) {
+      // reset flag and skip auto creation
+      justSelected.current = false;
+      return;
+    }
     // Small delay to allow for click events to process
     setTimeout(async () => {
-      if (searchTerm.trim() && !searchResults.find(k => k.name.toLowerCase() === searchTerm.toLowerCase())) {
-        try {
-          setIsCreating(true);
-          const newKeyword = await createKeyword(searchTerm.trim(), category);
-          handleSelect(newKeyword);
-        } catch (err) {
-          console.error('Error creating keyword:', err);
-        } finally {
-          setIsCreating(false);
-        }
+      const trimmedTerm = searchTerm.trim();
+      
+      // Ignore blank or whitespace-only inputs
+      if (!trimmedTerm) return;
+      
+      // Check if this keyword already exists in the current selection
+      const isDuplicate = value.some(k => k.name.toLowerCase() === trimmedTerm.toLowerCase());
+      if (isDuplicate) {
+        setSearchTerm('');
+        return;
+      }
+      
+      // Check if it exists in search results
+      if (!searchResults.find(k => k.name.toLowerCase() === trimmedTerm.toLowerCase())) {
+        // create local placeholder instead
+          const placeholder: Keyword = {
+            id: `local-${crypto.randomUUID()}`,
+            name: trimmedTerm,
+            category,
+          } as Keyword;
+          handleSelect(placeholder);
       }
     }, 150);
   };
@@ -182,7 +208,7 @@ export function KeywordSelect({
             {searchTerm && !exactMatch && (
               <button
                 type="button"
-                onClick={handleCreateKeyword}
+                onMouseDown={handleCreateKeyword}
                 disabled={isCreating}
                 className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 flex items-center space-x-2 text-primary"
               >
@@ -197,7 +223,7 @@ export function KeywordSelect({
               <button
                 key={keyword.id}
                 type="button"
-                onClick={() => handleSelect(keyword)}
+                onMouseDown={() => handleSelect(keyword)}
                 className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center justify-between"
               >
                 <span>{keyword.name}</span>
