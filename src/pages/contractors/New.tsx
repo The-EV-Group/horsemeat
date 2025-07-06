@@ -47,14 +47,14 @@ const contractorSchema = z.object({
   
   // Travel
   travel_anywhere: z.boolean(),
-  travel_radius_miles: z.number().optional(),
+  travel_radius_miles: z.coerce.number().positive('Travel radius must be greater than 0').optional(),
   
   // Pay
   pay_type: z.enum(['W2', '1099']),
   prefers_hourly: z.boolean(),
-  hourly_rate: z.number().optional(),
-  salary_lower: z.number().optional(),
-  salary_higher: z.number().optional(),
+  hourly_rate: z.coerce.number().positive('Hourly rate must be greater than 0').optional(),
+  salary_lower: z.coerce.number().positive('Salary must be greater than 0').optional(),
+  salary_higher: z.coerce.number().positive('Salary must be greater than 0').optional(),
   
   // Flags
   star_candidate: z.boolean(),
@@ -63,42 +63,48 @@ const contractorSchema = z.object({
   // Notes
   notes: z.string().optional(),
   candidate_summary: z.string().optional(),
-}).refine((data) => {
-  // Travel validation
+}).superRefine((data, ctx) => {
+  // Travel validation - only check if not willing to travel anywhere
   if (!data.travel_anywhere && (!data.travel_radius_miles || data.travel_radius_miles <= 0)) {
-    return false;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Travel radius is required when not willing to travel anywhere',
+      path: ['travel_radius_miles'],
+    });
   }
-  return true;
-}, {
-  message: 'Travel radius is required when not willing to travel anywhere',
-  path: ['travel_radius_miles'],
-}).refine((data) => {
-  // Pay validation
-  if (data.prefers_hourly && (!data.hourly_rate || data.hourly_rate <= 0)) {
-    return false;
+  
+  // Pay validation - check based on preference
+  if (data.prefers_hourly) {
+    if (!data.hourly_rate || data.hourly_rate <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Hourly rate is required',
+        path: ['hourly_rate'],
+      });
+    }
+  } else {
+    if (!data.salary_lower || data.salary_lower <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Minimum salary is required',
+        path: ['salary_lower'],
+      });
+    }
+    if (!data.salary_higher || data.salary_higher <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Maximum salary is required',
+        path: ['salary_higher'],
+      });
+    }
+    if (data.salary_lower && data.salary_higher && data.salary_lower > data.salary_higher) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Minimum salary must be less than or equal to maximum salary',
+        path: ['salary_lower'],
+      });
+    }
   }
-  return true;
-}, {
-  message: 'Hourly rate is required',
-  path: ['hourly_rate'],
-}).refine((data) => {
-  // Salary validation
-  if (!data.prefers_hourly && (!data.salary_lower || !data.salary_higher)) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'Salary range is required',
-  path: ['salary_lower'],
-}).refine((data) => {
-  // Salary range validation
-  if (!data.prefers_hourly && data.salary_lower && data.salary_higher && data.salary_lower > data.salary_higher) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'Minimum salary must be less than or equal to maximum salary',
-  path: ['salary_lower'],
 });
 
 type ContractorFormData = z.infer<typeof contractorSchema>;
@@ -124,7 +130,7 @@ export default function NewContractor() {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isValid, isSubmitting }
+    formState: { errors, isSubmitting }
   } = useForm<ContractorFormData>({
     resolver: zodResolver(contractorSchema),
     defaultValues: {
@@ -135,7 +141,7 @@ export default function NewContractor() {
       preferred_contact: 'email',
       travel_anywhere: false,
     },
-    mode: 'onChange'
+    mode: 'onBlur'
   });
 
   const watchedValues = watch();
@@ -600,7 +606,7 @@ export default function NewContractor() {
           <Button
             type="submit"
             className="bg-primary hover:bg-primary/90"
-            disabled={!isValid || isSubmitting || loading}
+            disabled={isSubmitting || loading}
           >
             {isSubmitting ? (
               <>
