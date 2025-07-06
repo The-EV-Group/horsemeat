@@ -1,8 +1,13 @@
 
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
-const Index = () => {
-  return <Navigate to="/dashboard" replace />;
-};
-
-export default Index;
+export default function Index() {
+  const { user } = useAuth();
+  
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <Navigate to="/login" replace />;
+}
