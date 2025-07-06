@@ -10,6 +10,7 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   required?: boolean;
   helperText?: string;
+  icon?: React.ReactNode;
 }
 
 interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -20,22 +21,30 @@ interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaEle
 }
 
 export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
-  ({ label, error, required, helperText, className, ...props }, ref) => {
+  ({ label, error, required, helperText, icon, className, ...props }, ref) => {
     return (
       <div className="space-y-2">
         <Label htmlFor={props.id} className="text-sm font-medium text-gray-700">
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
-        <Input
-          ref={ref}
-          className={cn(
-            'transition-colors duration-200',
-            error && 'border-destructive focus:border-destructive focus:ring-destructive',
-            className
+        <div className="relative">
+          {icon && (
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              {icon}
+            </div>
           )}
-          {...props}
-        />
+          <Input
+            ref={ref}
+            className={cn(
+              'transition-colors duration-200',
+              icon && 'pl-10',
+              error && 'border-destructive focus:border-destructive focus:ring-destructive',
+              className
+            )}
+            {...props}
+          />
+        </div>
         {error && (
           <p className="text-sm text-destructive">{error}</p>
         )}

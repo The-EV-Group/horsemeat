@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Pipeline } from 'lucide-react';
+import { Users, GitBranch } from 'lucide-react';
 
 export default function PotentialRecruits() {
   return (
@@ -14,7 +14,7 @@ export default function PotentialRecruits() {
       <Card className="shadow-soft">
         <CardHeader className="text-center">
           <div className="bg-success/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Pipeline className="h-8 w-8 text-success" />
+            <GitBranch className="h-8 w-8 text-success" />
           </div>
           <CardTitle>Recruitment Pipeline</CardTitle>
           <CardDescription>
