@@ -76,20 +76,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-app px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">H++</span>
             </div>
-            <span className="text-2xl font-bold text-primary">Horsemeat++</span>
+            <span className="text-2xl font-bold text-blue-600">Horsemeat++</span>
           </div>
           <p className="text-gray-600">EV Group Contractor CRM</p>
         </div>
 
-        <Card className="shadow-soft">
+        <Card className="shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
@@ -130,7 +130,7 @@ export default function Login() {
                   
                   <Button
                     type="submit"
-                    className="w-full bg-primary hover:bg-primary/90"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={loading}
                   >
                     {loading ? 'Signing in...' : 'Sign In'}
@@ -173,7 +173,7 @@ export default function Login() {
                   
                   <Button
                     type="submit"
-                    className="w-full bg-primary hover:bg-primary/90"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={loading}
                   >
                     {loading ? 'Creating account...' : 'Create Account'}
