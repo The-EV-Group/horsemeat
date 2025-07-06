@@ -12,6 +12,7 @@ export type Database = {
       contractor: {
         Row: {
           available: boolean | null
+          city: string | null
           email: string | null
           full_name: string | null
           hourly_rate: number | null
@@ -20,14 +21,19 @@ export type Database = {
           notes: string | null
           pay_type: string | null
           phone: string | null
+          preferred_contact: Database["public"]["Enums"]["contact_method"]
           prefers_hourly: boolean | null
           resume_url: string | null
           salary_higher: number | null
           salary_lower: number | null
           star_candidate: boolean | null
+          state: string | null
+          travel_anywhere: boolean
+          travel_radius_miles: number | null
         }
         Insert: {
           available?: boolean | null
+          city?: string | null
           email?: string | null
           full_name?: string | null
           hourly_rate?: number | null
@@ -36,14 +42,19 @@ export type Database = {
           notes?: string | null
           pay_type?: string | null
           phone?: string | null
+          preferred_contact?: Database["public"]["Enums"]["contact_method"]
           prefers_hourly?: boolean | null
           resume_url?: string | null
           salary_higher?: number | null
           salary_lower?: number | null
           star_candidate?: boolean | null
+          state?: string | null
+          travel_anywhere?: boolean
+          travel_radius_miles?: number | null
         }
         Update: {
           available?: boolean | null
+          city?: string | null
           email?: string | null
           full_name?: string | null
           hourly_rate?: number | null
@@ -52,11 +63,15 @@ export type Database = {
           notes?: string | null
           pay_type?: string | null
           phone?: string | null
+          preferred_contact?: Database["public"]["Enums"]["contact_method"]
           prefers_hourly?: boolean | null
           resume_url?: string | null
           salary_higher?: number | null
           salary_lower?: number | null
           star_candidate?: boolean | null
+          state?: string | null
+          travel_anywhere?: boolean
+          travel_radius_miles?: number | null
         }
         Relationships: []
       }
@@ -276,7 +291,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      contact_method: "email" | "phone" | "text"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -391,6 +406,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      contact_method: ["email", "phone", "text"],
+    },
   },
 } as const
