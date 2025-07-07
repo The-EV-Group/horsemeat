@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { SearchFilters } from './components/SearchFilters';
@@ -82,7 +83,14 @@ export default function SearchContractors() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4 text-gray-400" />
-                          <span>{contractor.city}, {contractor.state}</span>
+                          <span>
+                            {contractor.city && contractor.state 
+                              ? `${contractor.city}, ${contractor.state}`
+                              : contractor.state 
+                              ? contractor.state
+                              : 'Not Specified'
+                            }
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>

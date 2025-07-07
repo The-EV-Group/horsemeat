@@ -125,6 +125,12 @@ export function useContractorSearch() {
 
   const deleteContractor = async (id: string) => {
     try {
+      // First delete related records to avoid foreign key constraints
+      await supabase.from('contractor_keyword').delete().eq('contractor_id', id);
+      await supabase.from('contractor_history').delete().eq('contractor_id', id);
+      await supabase.from('contractor_task').delete().eq('contractor_id', id);
+      
+      // Then delete the contractor
       const { error } = await supabase
         .from('contractor')
         .delete()
@@ -139,6 +145,11 @@ export function useContractorSearch() {
     }
   };
 
+  const clearSearch = () => {
+    setContractors([]);
+    setError(null);
+  };
+
   return {
     contractors,
     loading,
@@ -146,5 +157,6 @@ export function useContractorSearch() {
     searchContractors,
     updateContractor,
     deleteContractor,
+    clearSearch,
   };
 }

@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X } from 'lucide-react';
 import { US_STATES } from '../schemas/contractorSchema';
 import { useContractorData } from '@/hooks/useContractorData';
+import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
 import type { Tables } from '@/integrations/supabase/types';
@@ -30,7 +31,6 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     tasks,
     loading: dataLoading,
     updateContractor,
-    deleteContractor,
     addHistoryEntry,
     updateHistoryEntry,
     deleteHistoryEntry,
@@ -38,6 +38,8 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     updateTask,
     deleteTask
   } = useContractorData(contractorId);
+
+  const { deleteContractor, clearSearch } = useContractorSearch();
 
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<any>('');
@@ -95,7 +97,8 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     try {
       setLoading(true);
       await deleteContractor(localContractor.id);
-      onClose();
+      clearSearch(); // Clear search results
+      onClose(); // Close profile and return to search
     } catch (error) {
       console.error('Error deleting contractor:', error);
       alert('Failed to delete contractor');

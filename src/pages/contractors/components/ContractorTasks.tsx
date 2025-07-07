@@ -49,7 +49,6 @@ export function ContractorTasks({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: 'in progress' as Task['status'],
     due_date: undefined as Date | undefined,
     is_public: false
   });
@@ -59,10 +58,18 @@ export function ContractorTasks({
     setFormData({
       title: '',
       description: '',
-      status: 'in progress',
       due_date: undefined,
       is_public: false
     });
+  };
+
+  const getStatusFromDueDate = (dueDate: Date | undefined): Task['status'] => {
+    if (!dueDate) return 'in progress';
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    return due < now ? 'overdue' : 'in progress';
   };
 
   const handleAddTask = async () => {
@@ -70,10 +77,11 @@ export function ContractorTasks({
     
     try {
       setLoading(true);
+      const status = getStatusFromDueDate(formData.due_date);
       await onAddTask({
         title: formData.title,
         description: formData.description || null,
-        status: formData.status,
+        status,
         due_date: formData.due_date ? formData.due_date.toISOString() : null,
         is_public: formData.is_public
       });
@@ -94,7 +102,6 @@ export function ContractorTasks({
       await onUpdateTask(editingTask.id, {
         title: formData.title,
         description: formData.description || null,
-        status: formData.status,
         due_date: formData.due_date ? formData.due_date.toISOString() : null,
         is_public: formData.is_public
       });
@@ -126,7 +133,6 @@ export function ContractorTasks({
     setFormData({
       title: task.title,
       description: task.description || '',
-      status: task.status,
       due_date: task.due_date ? new Date(task.due_date) : undefined,
       is_public: task.is_public
     });
@@ -270,22 +276,6 @@ export function ContractorTasks({
             </div>
             
             <div>
-              <Label>Status</Label>
-              <Select value={formData.status} onValueChange={(value: Task['status']) => 
-                setFormData(prev => ({ ...prev, status: value }))
-              }>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
               <Label>Due Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -303,6 +293,9 @@ export function ContractorTasks({
                   />
                 </PopoverContent>
               </Popover>
+              <p className="text-sm text-gray-500 mt-1">
+                Status will be set automatically based on due date
+              </p>
             </div>
             
             <div className="flex items-center space-x-2">

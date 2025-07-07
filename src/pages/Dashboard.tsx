@@ -1,35 +1,75 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Clock, CheckSquare, Edit, Eye, EyeOff } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Users, Clock, CheckSquare, Edit, Eye, EyeOff, Trash2, User, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { employee, user } = useAuth();
-  const { stats, tasks, loading, updateTask, getDaysUntilDue } = useDashboardStats();
+  const { stats, tasks, loading, updateTask, deleteTask, getDaysUntilDue } = useDashboardStats();
+  const navigate = useNavigate();
   const [editingTask, setEditingTask] = useState<any>(null);
-  const [newStatus, setNewStatus] = useState<string>('');
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    status: 'in progress' as 'overdue' | 'in progress' | 'completed',
+    due_date: undefined as Date | undefined
+  });
   const [dayFilter, setDayFilter] = useState<string>('all');
   const [taskLoading, setTaskLoading] = useState(false);
 
-  const handleUpdateTaskStatus = async () => {
-    if (!editingTask || !newStatus) return;
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
     
     try {
       setTaskLoading(true);
+      
+      // Auto-update to overdue if due date is today or past and status is not completed
+      let finalStatus = formData.status;
+      if (formData.due_date && formData.status !== 'completed') {
+        const daysUntil = getDaysUntilDue(formData.due_date.toISOString());
+        if (daysUntil !== null && daysUntil <= 0) {
+          finalStatus = 'overdue';
+        }
+      }
+      
       await updateTask(editingTask.id, { 
-        status: newStatus as 'overdue' | 'in progress' | 'completed' 
+        title: formData.title,
+        description: formData.description,
+        status: finalStatus,
+        due_date: formData.due_date ? formData.due_date.toISOString() : null
       });
       setEditingTask(null);
-      setNewStatus('');
+      resetForm();
     } catch (error) {
       console.error('Error updating task:', error);
+    } finally {
+      setTaskLoading(false);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    
+    try {
+      setTaskLoading(true);
+      await deleteTask(taskToDelete.id);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting task:', error);
     } finally {
       setTaskLoading(false);
     }
@@ -45,6 +85,29 @@ export default function Dashboard() {
     }
   };
 
+  const openEditDialog = (task: any) => {
+    setEditingTask(task);
+    setFormData({
+      title: task.title,
+      description: task.description || '',
+      status: task.status,
+      due_date: task.due_date ? new Date(task.due_date) : undefined
+    });
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      status: 'in progress',
+      due_date: undefined
+    });
+  };
+
+  const openContractorProfile = (contractorId: string) => {
+    navigate(`/contractors/search`, { state: { openProfile: contractorId } });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800';
@@ -56,6 +119,7 @@ export default function Dashboard() {
 
   const getFilteredTasks = () => {
     if (dayFilter === 'all') return tasks;
+    if (dayFilter === 'overdue') return tasks.filter(task => task.status === 'overdue');
     
     const days = parseInt(dayFilter);
     return tasks.filter(task => {
@@ -131,6 +195,7 @@ export default function Dashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tasks</SelectItem>
+                  <SelectItem value="overdue">Overdue Tasks</SelectItem>
                   <SelectItem value="1">Due within 1 day</SelectItem>
                   <SelectItem value="3">Due within 3 days</SelectItem>
                   <SelectItem value="7">Due within 1 week</SelectItem>
@@ -184,13 +249,27 @@ export default function Dashboard() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setEditingTask(task);
-                            setNewStatus(task.status);
-                          }}
+                          onClick={() => openEditDialog(task)}
                           className="h-8 w-8 p-0"
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTaskToDelete(task)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openContractorProfile(task.contractor_id)}
+                          className="h-8 w-8 p-0"
+                          title="Open Contractor Profile"
+                        >
+                          <User className="h-4 w-4" />
                         </Button>
                         {isOwner && (
                           <Button
@@ -224,33 +303,105 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Edit Task Status Dialog */}
-      <Dialog open={!!editingTask} onOpenChange={() => setEditingTask(null)}>
-        <DialogContent>
+      {/* Edit Task Dialog */}
+      <Dialog open={!!editingTask} onOpenChange={() => {
+        setEditingTask(null);
+        resetForm();
+      }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Update Task Status</DialogTitle>
+            <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>
-              Change the status of "{editingTask?.title}"
+              Update task details for "{editingTask?.title}"
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Select value={newStatus} onValueChange={setNewStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-              </SelectContent>
-            </Select>
+            <div>
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Task title"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Task description (optional)"
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <Label>Status</Label>
+              <Select value={formData.status} onValueChange={(value: 'overdue' | 'in progress' | 'completed') => 
+                setFormData(prev => ({ ...prev, status: value }))
+              }>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Due Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.due_date ? format(formData.due_date, 'PPP') : 'Pick a date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={formData.due_date}
+                    onSelect={(date) => setFormData(prev => ({ ...prev, due_date: date }))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingTask(null)}>
+            <Button variant="outline" onClick={() => {
+              setEditingTask(null);
+              resetForm();
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateTaskStatus} disabled={taskLoading || !newStatus}>
-              Update Status
+            <Button onClick={handleUpdateTask} disabled={taskLoading || !formData.title.trim()}>
+              Update Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Task Dialog */}
+      <Dialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTaskToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteTask} disabled={taskLoading}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

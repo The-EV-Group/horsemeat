@@ -91,6 +91,21 @@ export function useDashboardStats() {
     }
   };
 
+  const deleteTask = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('contractor_task')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      throw error;
+    }
+  };
+
   const getDaysUntilDue = (dueDate: string | null) => {
     if (!dueDate) return null;
     const due = new Date(dueDate);
@@ -117,6 +132,7 @@ export function useDashboardStats() {
     tasks,
     loading,
     updateTask,
+    deleteTask,
     getDaysUntilDue,
     refreshData: () => {
       fetchStats();
