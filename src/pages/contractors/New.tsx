@@ -1,33 +1,39 @@
-
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useKeywords } from '@/hooks/useKeywords';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
-import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useKeywords } from "@/hooks/useKeywords";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
+import type {
+  Tables,
+  TablesInsert,
+  Enums,
+} from "@/integrations/supabase/types";
 
 // Schema and types
-import { contractorSchema, type ContractorFormData } from './schemas/contractorSchema';
+import {
+  contractorSchema,
+  type ContractorFormData,
+} from "./schemas/contractorSchema";
 
 // Components
-import { CandidateFlagsSection } from './components/CandidateFlagsSection';
-import { ResumeUploadSection } from './components/ResumeUploadSection';
-import { BasicInfoSection } from './components/BasicInfoSection';
-import { LocationSection } from './components/LocationSection';
-import { TravelSection } from './components/TravelSection';
-import { PaySection } from './components/PaySection';
-import { AdditionalInfoSection } from './components/AdditionalInfoSection';
-import { NewContractorKeywordsSection } from './components/NewContractorKeywordsSection';
+import { CandidateFlagsSection } from "./components/CandidateFlagsSection";
+import { ResumeUploadSection } from "./components/ResumeUploadSection";
+import { BasicInfoSection } from "./components/BasicInfoSection";
+import { LocationSection } from "./components/LocationSection";
+import { TravelSection } from "./components/TravelSection";
+import { PaySection } from "./components/PaySection";
+import { AdditionalInfoSection } from "./components/AdditionalInfoSection";
+import { NewContractorKeywordsSection } from "./components/NewContractorKeywordsSection";
 
 // Hooks
-import { useResumeUpload } from './hooks/useResumeUpload';
+import { useResumeUpload } from "./hooks/useResumeUpload";
 
-type Keyword = Tables<'keyword'>;
+type Keyword = Tables<"keyword">;
 
 export default function NewContractor() {
   const navigate = useNavigate();
@@ -42,9 +48,13 @@ export default function NewContractor() {
       star_candidate: false,
       prefers_hourly: false,
       travel_anywhere: false,
-      preferred_contact: 'email'
-    }
+      preferred_contact: "email",
+      pay_type: "W2", // Set default employment type
+    },
   });
+
+  // Use form.watch for reactive values
+  const watchedValues = form.watch();
 
   // Keywords state
   const [keywords, setKeywords] = useState<{
@@ -52,24 +62,34 @@ export default function NewContractor() {
     industries: Keyword[];
     certifications: Keyword[];
     companies: Keyword[];
-    'job titles': Keyword[];
+    "job titles": Keyword[];
   }>({
     skills: [],
     industries: [],
     certifications: [],
     companies: [],
-    'job titles': []
+    "job titles": [],
   });
 
   // Resume upload
-  const { uploadFile, uploading, uploadedUrl } = useResumeUpload();
+  const {
+    resumeFile,
+    uploadProgress,
+    uploading,
+    uploadedUrl,
+    handleFileChange,
+    removeFile,
+    uploadFile,
+  } = useResumeUpload();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createContractor = async (contractorData: TablesInsert<'contractor'>) => {
+  const createContractor = async (
+    contractorData: TablesInsert<"contractor">
+  ) => {
     const { data, error } = await supabase
-      .from('contractor')
+      .from("contractor")
       .insert(contractorData)
       .select()
       .single();
@@ -78,14 +98,17 @@ export default function NewContractor() {
     return data.id;
   };
 
-  const updateContractorKeywords = async (contractorId: string, keywordIds: string[]) => {
-    const keywordInserts = keywordIds.map(keywordId => ({
+  const updateContractorKeywords = async (
+    contractorId: string,
+    keywordIds: string[]
+  ) => {
+    const keywordInserts = keywordIds.map((keywordId) => ({
       contractor_id: contractorId,
-      keyword_id: keywordId
+      keyword_id: keywordId,
     }));
 
     const { error } = await supabase
-      .from('contractor_keyword')
+      .from("contractor_keyword")
       .insert(keywordInserts);
 
     if (error) throw error;
@@ -98,20 +121,22 @@ export default function NewContractor() {
 
       // Upload resume if file is selected
       let resumeUrl = uploadedUrl;
-      if (data.resume_file && !uploadedUrl) {
-        resumeUrl = await uploadFile(data.resume_file);
+      if (resumeFile && !uploadedUrl) {
+        resumeUrl = await uploadFile(resumeFile);
       }
 
       // Prepare contractor data
-      const contractorData: TablesInsert<'contractor'> = {
+      const contractorData: TablesInsert<"contractor"> = {
         full_name: data.full_name,
         email: data.email,
         phone: data.phone,
-        preferred_contact: data.preferred_contact,
+        preferred_contact: data.preferred_contact as Enums<"contact_method">,
         city: data.city,
         state: data.state,
         travel_anywhere: data.travel_anywhere,
-        travel_radius_miles: data.travel_anywhere ? null : data.travel_radius_miles,
+        travel_radius_miles: data.travel_anywhere
+          ? null
+          : data.travel_radius_miles,
         pay_type: data.pay_type,
         prefers_hourly: data.prefers_hourly,
         hourly_rate: data.prefers_hourly ? data.hourly_rate : null,
@@ -120,40 +145,47 @@ export default function NewContractor() {
         available: data.available,
         star_candidate: data.star_candidate,
         notes: data.notes,
-        summary: data.candidate_summary,
-        resume_url: resumeUrl
+        resume_url: resumeUrl,
+        summary: data.candidate_summary, // Add candidate_summary field to the summary column
       };
 
       // Create contractor
       const contractorId = await createContractor(contractorData);
 
+      // Reset file state after successful upload
+      removeFile();
+
       // Process keywords and create any new ones
       const processedKeywords = { ...keywords };
-      
+
       for (const [category, categoryKeywords] of Object.entries(keywords)) {
         const processedCategoryKeywords: typeof categoryKeywords = [];
-        
+
         for (const keyword of categoryKeywords) {
-          if (keyword.id.startsWith('local-')) {
+          if (keyword.id.startsWith("local-")) {
             // Create new keyword
             try {
-              const createdKeyword = await createKeyword(keyword.name, category);
+              const createdKeyword = await createKeyword(
+                keyword.name,
+                category
+              );
               processedCategoryKeywords.push(createdKeyword);
             } catch (error) {
-              console.error('Error creating keyword:', error);
+              console.error("Error creating keyword:", error);
             }
           } else {
             processedCategoryKeywords.push(keyword);
           }
         }
-        
-        processedKeywords[category as keyof typeof processedKeywords] = processedCategoryKeywords;
+
+        processedKeywords[category as keyof typeof processedKeywords] =
+          processedCategoryKeywords;
       }
 
       // Add keywords if any were selected
       const allKeywords: string[] = [];
-      Object.values(processedKeywords).forEach(categoryKeywords => {
-        categoryKeywords.forEach(keyword => {
+      Object.values(processedKeywords).forEach((categoryKeywords) => {
+        categoryKeywords.forEach((keyword) => {
           allKeywords.push(keyword.id);
         });
       });
@@ -167,10 +199,12 @@ export default function NewContractor() {
         description: "Contractor created successfully!",
       });
 
-      navigate('/contractors/search');
+      navigate("/contractors/search");
     } catch (err) {
-      console.error('Error creating contractor:', err);
-      setError(err instanceof Error ? err.message : 'Failed to create contractor');
+      console.error("Error creating contractor:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to create contractor"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -180,7 +214,9 @@ export default function NewContractor() {
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">Add New Contractor</h1>
-        <p className="text-gray-600 mt-2">Fill out the form below to add a new contractor to the system</p>
+        <p className="text-gray-600 mt-2">
+          Fill out the form below to add a new contractor to the system
+        </p>
       </div>
 
       {error && (
@@ -190,41 +226,66 @@ export default function NewContractor() {
       )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <BasicInfoSection form={form} />
-        
-        <LocationSection form={form} />
-        
-        <TravelSection form={form} />
-        
-        <PaySection form={form} />
-        
-        <NewContractorKeywordsSection 
+        <ResumeUploadSection
+          resumeFile={resumeFile}
+          resumeUrl={uploadedUrl}
+          uploadProgress={uploadProgress}
+          isUploading={uploading}
+          onFileChange={handleFileChange}
+          onRemoveFile={removeFile}
+          onUrlChange={() => {}} // URL changes handled by the hook internally
+        />
+
+        <BasicInfoSection
+          register={form.register}
+          errors={form.formState.errors}
+          watchedValues={watchedValues}
+          setValue={form.setValue}
+        />
+
+        <LocationSection
+          register={form.register}
+          watchedValues={watchedValues}
+          setValue={form.setValue}
+        />
+
+        <TravelSection
+          register={form.register}
+          errors={form.formState.errors}
+          watchedValues={watchedValues}
+          setValue={form.setValue}
+        />
+
+        <PaySection
+          register={form.register}
+          errors={form.formState.errors}
+          watchedValues={watchedValues}
+          setValue={form.setValue}
+        />
+
+        <NewContractorKeywordsSection
           keywords={keywords}
           setKeywords={setKeywords}
         />
-        
-        <CandidateFlagsSection form={form} />
-        
-        <AdditionalInfoSection form={form} />
-        
-        <ResumeUploadSection 
-          form={form}
-          uploading={uploading}
-          uploadedUrl={uploadedUrl}
-          onUpload={uploadFile}
+
+        <CandidateFlagsSection
+          watchedValues={watchedValues}
+          setValue={form.setValue}
         />
 
+        <AdditionalInfoSection register={form.register} />
+
         <div className="flex justify-end space-x-4 pt-6 border-t">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => navigate('/contractors/search')}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/contractors/search")}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isSubmitting}
             className="min-w-[120px]"
           >
@@ -234,7 +295,7 @@ export default function NewContractor() {
                 Creating...
               </>
             ) : (
-              'Create Contractor'
+              "Create Contractor"
             )}
           </Button>
         </div>
