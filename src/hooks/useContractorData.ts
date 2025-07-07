@@ -176,51 +176,75 @@ export function useContractorData(contractorId: string) {
   // Update keywords
   const updateKeywords = async (newKeywords: typeof keywords) => {
     try {
-      // First, delete existing contractor keywords
-      const { error: deleteError } = await supabase
+      // First, get current contractor keywords to compare
+      const { data: currentKeywords, error: fetchError } = await supabase
         .from('contractor_keyword')
-        .delete()
+        .select('keyword_id')
         .eq('contractor_id', contractorId);
 
-      if (deleteError) throw deleteError;
+      if (fetchError) throw fetchError;
 
-      // Process each category
-      const allKeywordsToInsert = [];
+      // Build arrays of keyword IDs to add and remove
+      const currentKeywordIds = new Set(currentKeywords?.map(ck => ck.keyword_id) || []);
+      const newKeywordIds = new Set<string>();
+      
+      // Process all new keywords and create any that need to be created
+      const processedKeywords = { ...newKeywords };
       
       for (const [category, categoryKeywords] of Object.entries(newKeywords)) {
+        const processedCategoryKeywords: typeof categoryKeywords = [];
+        
         for (const keyword of categoryKeywords) {
-          // If keyword has a local ID (starts with 'local-'), create it first
           if (keyword.id.startsWith('local-')) {
+            // Create new keyword
             try {
               const createdKeyword = await createKeyword(keyword.name, category);
-              allKeywordsToInsert.push({
-                contractor_id: contractorId,
-                keyword_id: createdKeyword.id
-              });
+              processedCategoryKeywords.push(createdKeyword);
+              newKeywordIds.add(createdKeyword.id);
             } catch (error) {
               console.error('Error creating keyword:', error);
               // Skip this keyword if creation fails
             }
           } else {
-            allKeywordsToInsert.push({
-              contractor_id: contractorId,
-              keyword_id: keyword.id
-            });
+            processedCategoryKeywords.push(keyword);
+            newKeywordIds.add(keyword.id);
           }
         }
+        
+        processedKeywords[category as keyof typeof processedKeywords] = processedCategoryKeywords;
       }
 
-      // Insert all contractor-keyword relationships
-      if (allKeywordsToInsert.length > 0) {
+      // Determine which keywords to add and remove
+      const keywordsToAdd = Array.from(newKeywordIds).filter(id => !currentKeywordIds.has(id));
+      const keywordsToRemove = Array.from(currentKeywordIds).filter(id => !newKeywordIds.has(id));
+
+      // Remove keywords that are no longer selected
+      if (keywordsToRemove.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('contractor_keyword')
+          .delete()
+          .eq('contractor_id', contractorId)
+          .in('keyword_id', keywordsToRemove);
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Add new keywords
+      if (keywordsToAdd.length > 0) {
+        const keywordInserts = keywordsToAdd.map(keywordId => ({
+          contractor_id: contractorId,
+          keyword_id: keywordId
+        }));
+
         const { error: insertError } = await supabase
           .from('contractor_keyword')
-          .insert(allKeywordsToInsert);
+          .insert(keywordInserts);
 
         if (insertError) throw insertError;
       }
 
-      // Update local state
-      setKeywords(newKeywords);
+      // Update local state with processed keywords
+      setKeywords(processedKeywords);
     } catch (error) {
       console.error('Error updating keywords:', error);
       throw error;

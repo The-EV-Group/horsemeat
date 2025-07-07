@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -219,6 +218,15 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     </div>
   );
 
+  const handleKeywordsSave = async (newKeywords: typeof keywords) => {
+    try {
+      await updateKeywords(newKeywords);
+    } catch (error) {
+      console.error('Error saving keywords:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -350,7 +358,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
       {/* Keywords Section */}
       <KeywordsSection 
         keywords={keywords}
-        setKeywords={updateKeywords}
+        onSave={handleKeywordsSave}
       />
 
       {/* History Section */}
