@@ -167,7 +167,7 @@ export type Database = {
           due_date: string | null
           id: string
           is_public: boolean | null
-          status: string
+          status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at: string | null
         }
@@ -179,7 +179,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_public?: boolean | null
-          status: string
+          status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at?: string | null
         }
@@ -191,7 +191,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           is_public?: boolean | null
-          status?: string
+          status?: Database["public"]["Enums"]["task_status"]
           title?: string
           updated_at?: string | null
         }
@@ -300,6 +300,7 @@ export type Database = {
     }
     Enums: {
       contact_method: "email" | "phone" | "text"
+      task_status: "overdue" | "in progress" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -428,6 +429,7 @@ export const Constants = {
   public: {
     Enums: {
       contact_method: ["email", "phone", "text"],
+      task_status: ["overdue", "in progress", "completed"],
     },
   },
 } as const

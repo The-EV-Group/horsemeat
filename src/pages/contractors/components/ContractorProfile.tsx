@@ -9,25 +9,51 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Download, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText } from 'lucide-react';
+import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X } from 'lucide-react';
 import { US_STATES } from '../schemas/contractorSchema';
+import { useContractorData } from '@/hooks/useContractorData';
+import { ContractorHistory } from './ContractorHistory';
+import { ContractorTasks } from './ContractorTasks';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Contractor = Tables<'contractor'>;
 
 interface ContractorProfileProps {
-  contractor: Contractor;
-  onUpdate: (id: string, updates: Partial<Contractor>) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  contractorId: string;
   onClose: () => void;
 }
 
-export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: ContractorProfileProps) {
+export function ContractorProfile({ contractorId, onClose }: ContractorProfileProps) {
+  const {
+    contractor: localContractor,
+    history,
+    tasks,
+    loading: dataLoading,
+    updateContractor,
+    deleteContractor,
+    addHistoryEntry,
+    updateHistoryEntry,
+    deleteHistoryEntry,
+    addTask,
+    updateTask,
+    deleteTask
+  } = useContractorData(contractorId);
+
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<any>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [localContractor, setLocalContractor] = useState<Contractor>(contractor);
+
+  if (dataLoading || !localContractor) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading contractor profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleEdit = (field: string, currentValue: any) => {
     setEditField(field);
@@ -54,11 +80,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
     
     try {
       setLoading(true);
-      await onUpdate(localContractor.id, { [editField]: editValue });
-      
-      // Update local state immediately
-      setLocalContractor(prev => ({ ...prev, [editField]: editValue }));
-      
+      await updateContractor(localContractor.id, { [editField]: editValue });
       setEditField(null);
       setEditValue('');
     } catch (error) {
@@ -72,7 +94,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
   const handleDelete = async () => {
     try {
       setLoading(true);
-      await onDelete(localContractor.id);
+      await deleteContractor(localContractor.id);
       onClose();
     } catch (error) {
       console.error('Error deleting contractor:', error);
@@ -80,23 +102,6 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
     } finally {
       setLoading(false);
     }
-  };
-
-  const downloadProfile = () => {
-    const profileData = {
-      ...localContractor,
-      downloaded_at: new Date().toISOString()
-    };
-    
-    const blob = new Blob([JSON.stringify(profileData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${localContractor.full_name || 'contractor'}_profile.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   const handleResumeView = () => {
@@ -221,19 +226,10 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
               </div>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={downloadProfile}>
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
-            </Button>
-            <Button variant="outline" onClick={onClose}>
-              Close
-            </Button>
-          </div>
+          <Button variant="outline" onClick={onClose}>
+            <X className="mr-2 h-4 w-4" />
+            Close
+          </Button>
         </div>
       </div>
 
@@ -332,6 +328,40 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
           </CardContent>
         </Card>
       </div>
+
+      {/* History Section */}
+      <ContractorHistory
+        contractorId={contractorId}
+        entries={history}
+        onAddEntry={addHistoryEntry}
+        onUpdateEntry={updateHistoryEntry}
+        onDeleteEntry={deleteHistoryEntry}
+      />
+
+      {/* Tasks Section */}
+      <ContractorTasks
+        contractorId={contractorId}
+        tasks={tasks}
+        onAddTask={addTask}
+        onUpdateTask={updateTask}
+        onDeleteTask={deleteTask}
+      />
+
+      {/* Actions Section */}
+      <Card className="shadow-sm border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-600">Danger Zone</CardTitle>
+          <CardDescription>
+            These actions cannot be undone. Please be careful.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Contractor
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
