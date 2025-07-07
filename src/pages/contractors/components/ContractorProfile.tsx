@@ -14,7 +14,7 @@ import { useContractorData } from '@/hooks/useContractorData';
 import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
-import { KeywordsSection } from './KeywordsSection';
+import { ProfileKeywordsSection } from './ProfileKeywordsSection';
 import type { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
@@ -356,7 +356,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
       </div>
 
       {/* Keywords Section */}
-      <KeywordsSection 
+      <ProfileKeywordsSection 
         keywords={keywords}
         onSave={handleKeywordsSave}
       />

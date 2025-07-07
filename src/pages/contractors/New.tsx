@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useContractors } from '@/hooks/useContractors';
 import { useKeywords } from '@/hooks/useKeywords';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 // Schema and types
@@ -22,7 +22,7 @@ import { LocationSection } from './components/LocationSection';
 import { TravelSection } from './components/TravelSection';
 import { PaySection } from './components/PaySection';
 import { AdditionalInfoSection } from './components/AdditionalInfoSection';
-import { KeywordsSection } from './components/KeywordsSection';
+import { NewContractorKeywordsSection } from './components/NewContractorKeywordsSection';
 
 // Hooks
 import { useResumeUpload } from './hooks/useResumeUpload';
@@ -32,7 +32,6 @@ type Keyword = Tables<'keyword'>;
 export default function NewContractor() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { createContractor, updateContractorKeywords } = useContractors();
   const { createKeyword } = useKeywords();
 
   // Form state
@@ -68,32 +67,28 @@ export default function NewContractor() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleKeywordsSave = async (newKeywords: typeof keywords) => {
-    // Process any local keywords that need to be created
-    const processedKeywords = { ...newKeywords };
-    
-    for (const [category, categoryKeywords] of Object.entries(newKeywords)) {
-      const processedCategoryKeywords: typeof categoryKeywords = [];
-      
-      for (const keyword of categoryKeywords) {
-        if (keyword.id.startsWith('local-')) {
-          // Create new keyword
-          try {
-            const createdKeyword = await createKeyword(keyword.name, category);
-            processedCategoryKeywords.push(createdKeyword);
-          } catch (error) {
-            console.error('Error creating keyword:', error);
-            // Skip this keyword if creation fails
-          }
-        } else {
-          processedCategoryKeywords.push(keyword);
-        }
-      }
-      
-      processedKeywords[category as keyof typeof processedKeywords] = processedCategoryKeywords;
-    }
+  const createContractor = async (contractorData: TablesInsert<'contractor'>) => {
+    const { data, error } = await supabase
+      .from('contractor')
+      .insert(contractorData)
+      .select()
+      .single();
 
-    setKeywords(processedKeywords);
+    if (error) throw error;
+    return data.id;
+  };
+
+  const updateContractorKeywords = async (contractorId: string, keywordIds: string[]) => {
+    const keywordInserts = keywordIds.map(keywordId => ({
+      contractor_id: contractorId,
+      keyword_id: keywordId
+    }));
+
+    const { error } = await supabase
+      .from('contractor_keyword')
+      .insert(keywordInserts);
+
+    if (error) throw error;
   };
 
   const onSubmit = async (data: ContractorFormData) => {
@@ -125,20 +120,41 @@ export default function NewContractor() {
         available: data.available,
         star_candidate: data.star_candidate,
         notes: data.notes,
-        summary: data.summary,
+        summary: data.candidate_summary,
         resume_url: resumeUrl
       };
 
       // Create contractor
       const contractorId = await createContractor(contractorData);
 
+      // Process keywords and create any new ones
+      const processedKeywords = { ...keywords };
+      
+      for (const [category, categoryKeywords] of Object.entries(keywords)) {
+        const processedCategoryKeywords: typeof categoryKeywords = [];
+        
+        for (const keyword of categoryKeywords) {
+          if (keyword.id.startsWith('local-')) {
+            // Create new keyword
+            try {
+              const createdKeyword = await createKeyword(keyword.name, category);
+              processedCategoryKeywords.push(createdKeyword);
+            } catch (error) {
+              console.error('Error creating keyword:', error);
+            }
+          } else {
+            processedCategoryKeywords.push(keyword);
+          }
+        }
+        
+        processedKeywords[category as keyof typeof processedKeywords] = processedCategoryKeywords;
+      }
+
       // Add keywords if any were selected
       const allKeywords: string[] = [];
-      Object.values(keywords).forEach(categoryKeywords => {
+      Object.values(processedKeywords).forEach(categoryKeywords => {
         categoryKeywords.forEach(keyword => {
-          if (!keyword.id.startsWith('local-')) {
-            allKeywords.push(keyword.id);
-          }
+          allKeywords.push(keyword.id);
         });
       });
 
@@ -182,9 +198,9 @@ export default function NewContractor() {
         
         <PaySection form={form} />
         
-        <KeywordsSection 
+        <NewContractorKeywordsSection 
           keywords={keywords}
-          onSave={handleKeywordsSave}
+          setKeywords={setKeywords}
         />
         
         <CandidateFlagsSection form={form} />
