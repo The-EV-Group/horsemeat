@@ -2,11 +2,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useKeywords } from '@/hooks/useKeywords';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Contractor = Tables<'contractor'>;
 type ContractorHistory = Tables<'contractor_history'>;
 type ContractorTask = Tables<'contractor_task'>;
+type Keyword = Tables<'keyword'>;
 
 interface HistoryEntry extends ContractorHistory {
   creator_name?: string;
@@ -18,9 +20,23 @@ interface Task extends ContractorTask {
 
 export function useContractorData(contractorId: string) {
   const { user } = useAuth();
+  const { createKeyword } = useKeywords();
   const [contractor, setContractor] = useState<Contractor | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [keywords, setKeywords] = useState<{
+    skills: Keyword[];
+    industries: Keyword[];
+    certifications: Keyword[];
+    companies: Keyword[];
+    'job titles': Keyword[];
+  }>({
+    skills: [],
+    industries: [],
+    certifications: [],
+    companies: [],
+    'job titles': []
+  });
   const [loading, setLoading] = useState(true);
 
   // Fetch contractor data
@@ -36,6 +52,56 @@ export function useContractorData(contractorId: string) {
       setContractor(data);
     } catch (error) {
       console.error('Error fetching contractor:', error);
+    }
+  };
+
+  // Fetch contractor keywords
+  const fetchKeywords = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contractor_keyword')
+        .select(`
+          keyword:keyword_id (
+            id,
+            name,
+            category
+          )
+        `)
+        .eq('contractor_id', contractorId);
+
+      if (error) throw error;
+
+      // Group keywords by category
+      const groupedKeywords = {
+        skills: [],
+        industries: [],
+        certifications: [],
+        companies: [],
+        'job titles': []
+      };
+
+      data?.forEach((item: any) => {
+        if (item.keyword) {
+          const keyword = item.keyword;
+          // Map database categories to UI categories
+          const categoryMap: Record<string, keyof typeof groupedKeywords> = {
+            'skill': 'skills',
+            'industry': 'industries',
+            'certification': 'certifications',
+            'company': 'companies',
+            'job_title': 'job titles'
+          };
+          
+          const uiCategory = categoryMap[keyword.category];
+          if (uiCategory && groupedKeywords[uiCategory]) {
+            groupedKeywords[uiCategory].push(keyword);
+          }
+        }
+      });
+
+      setKeywords(groupedKeywords);
+    } catch (error) {
+      console.error('Error fetching keywords:', error);
     }
   };
 
@@ -103,6 +169,60 @@ export function useContractorData(contractorId: string) {
       setContractor(prev => prev ? { ...prev, ...updates } : null);
     } catch (error) {
       console.error('Error updating contractor:', error);
+      throw error;
+    }
+  };
+
+  // Update keywords
+  const updateKeywords = async (newKeywords: typeof keywords) => {
+    try {
+      // First, delete existing contractor keywords
+      const { error: deleteError } = await supabase
+        .from('contractor_keyword')
+        .delete()
+        .eq('contractor_id', contractorId);
+
+      if (deleteError) throw deleteError;
+
+      // Process each category
+      const allKeywordsToInsert = [];
+      
+      for (const [category, categoryKeywords] of Object.entries(newKeywords)) {
+        for (const keyword of categoryKeywords) {
+          // If keyword has a local ID (starts with 'local-'), create it first
+          if (keyword.id.startsWith('local-')) {
+            try {
+              const createdKeyword = await createKeyword(keyword.name, category);
+              allKeywordsToInsert.push({
+                contractor_id: contractorId,
+                keyword_id: createdKeyword.id
+              });
+            } catch (error) {
+              console.error('Error creating keyword:', error);
+              // Skip this keyword if creation fails
+            }
+          } else {
+            allKeywordsToInsert.push({
+              contractor_id: contractorId,
+              keyword_id: keyword.id
+            });
+          }
+        }
+      }
+
+      // Insert all contractor-keyword relationships
+      if (allKeywordsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from('contractor_keyword')
+          .insert(allKeywordsToInsert);
+
+        if (insertError) throw insertError;
+      }
+
+      // Update local state
+      setKeywords(newKeywords);
+    } catch (error) {
+      console.error('Error updating keywords:', error);
       throw error;
     }
   };
@@ -230,7 +350,8 @@ export function useContractorData(contractorId: string) {
       await Promise.all([
         fetchContractor(),
         fetchHistory(),
-        fetchTasks()
+        fetchTasks(),
+        fetchKeywords()
       ]);
       setLoading(false);
     };
@@ -244,6 +365,7 @@ export function useContractorData(contractorId: string) {
     contractor,
     history,
     tasks,
+    keywords,
     loading,
     updateContractor,
     deleteContractor,
@@ -252,6 +374,7 @@ export function useContractorData(contractorId: string) {
     deleteHistoryEntry,
     addTask,
     updateTask,
-    deleteTask
+    deleteTask,
+    updateKeywords
   };
 }

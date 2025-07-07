@@ -9,12 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X } from 'lucide-react';
+import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags } from 'lucide-react';
 import { US_STATES } from '../schemas/contractorSchema';
 import { useContractorData } from '@/hooks/useContractorData';
 import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
+import { KeywordsSection } from './KeywordsSection';
 import type { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
@@ -30,6 +31,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     contractor: localContractor,
     history,
     tasks,
+    keywords,
     loading: dataLoading,
     updateContractor,
     addHistoryEntry,
@@ -37,7 +39,8 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     deleteHistoryEntry,
     addTask,
     updateTask,
-    deleteTask
+    deleteTask,
+    updateKeywords
   } = useContractorData(contractorId);
 
   const { deleteContractor } = useContractorSearch();
@@ -343,6 +346,12 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
           </CardContent>
         </Card>
       </div>
+
+      {/* Keywords Section */}
+      <KeywordsSection 
+        keywords={keywords}
+        setKeywords={updateKeywords}
+      />
 
       {/* History Section */}
       <ContractorHistory
