@@ -37,7 +37,7 @@ export function TravelSection({ register, errors, watchedValues, setValue }: Tra
             <FormInput
               label="Travel Radius (miles)"
               type="number"
-              {...register('travel_radius_miles', { valueAsNumber: true })}
+              {...register('travel_radius_miles')}
               error={errors.travel_radius_miles?.message}
               placeholder="50"
               helperText="Maximum distance willing to travel"

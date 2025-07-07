@@ -51,6 +51,7 @@ export default function NewContractor() {
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors, isSubmitting, isValid }
   } = useForm<ContractorFormData>({
     resolver: zodResolver(contractorSchema),
@@ -136,7 +137,18 @@ export default function NewContractor() {
         description: "Contractor created successfully!",
       });
       
-      navigate(`/contractors/${newContractor.id}`);
+      // Reset form and clear keywords
+      reset();
+      setKeywords({
+        skills: [],
+        industries: [],
+        certifications: [],
+        companies: [],
+        'job titles': [],
+      });
+      removeFile();
+      
+      // Stay on the same page with cleared inputs
       
     } catch (err) {
       console.error('Error creating contractor:', err);

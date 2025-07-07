@@ -47,7 +47,7 @@ export function PaySection({ register, errors, watchedValues, setValue }: PaySec
               label="Hourly Rate"
               type="number"
               step="0.01"
-              {...register('hourly_rate', { valueAsNumber: true })}
+              {...register('hourly_rate')}
               error={errors.hourly_rate?.message}
               required
               placeholder="65.00"
@@ -58,7 +58,7 @@ export function PaySection({ register, errors, watchedValues, setValue }: PaySec
             <FormInput
               label="Minimum Salary"
               type="number"
-              {...register('salary_lower', { valueAsNumber: true })}
+              {...register('salary_lower')}
               error={errors.salary_lower?.message}
               required
               placeholder="80000"
@@ -66,7 +66,8 @@ export function PaySection({ register, errors, watchedValues, setValue }: PaySec
             <FormInput
               label="Maximum Salary"
               type="number"
-              {...register('salary_higher', { valueAsNumber: true })}
+              {...register('salary_higher')}
+              error={errors.salary_higher?.message}
               required
               placeholder="120000"
             />
