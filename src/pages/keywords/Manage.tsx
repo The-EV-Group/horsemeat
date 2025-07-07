@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -23,11 +22,11 @@ interface KeywordWithUsage extends Keyword {
 }
 
 const CATEGORIES = [
-  { key: 'skills', label: 'Skills', dbValue: 'skill' },
-  { key: 'industries', label: 'Industries', dbValue: 'industry' },
-  { key: 'certifications', label: 'Certifications', dbValue: 'certification' },
-  { key: 'companies', label: 'Companies', dbValue: 'company' },
-  { key: 'job-titles', label: 'Job Titles', dbValue: 'job_title' },
+  { key: 'skills', label: 'Skills', singular: 'Skill', dbValue: 'skill' },
+  { key: 'industries', label: 'Industries', singular: 'Industry', dbValue: 'industry' },
+  { key: 'certifications', label: 'Certifications', singular: 'Certification', dbValue: 'certification' },
+  { key: 'companies', label: 'Companies', singular: 'Company', dbValue: 'company' },
+  { key: 'job-titles', label: 'Job Titles', singular: 'Job Title', dbValue: 'job_title' },
 ];
 
 export default function ManageKeywords() {
@@ -298,7 +297,7 @@ export default function ManageKeywords() {
                   </div>
                   <Button onClick={() => setIsAddDialogOpen(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add {category.label.slice(0, -1)}
+                    Add {category.singular}
                   </Button>
                 </div>
 
@@ -382,9 +381,9 @@ export default function ManageKeywords() {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New {activeCategory?.label.slice(0, -1)}</DialogTitle>
+            <DialogTitle>Add New {activeCategory?.singular}</DialogTitle>
             <DialogDescription>
-              Enter the name for the new {activeCategory?.label.toLowerCase().slice(0, -1)}.
+              Enter the name for the new {activeCategory?.singular.toLowerCase()}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -394,7 +393,7 @@ export default function ManageKeywords() {
                 id="newKeyword"
                 value={newKeywordName}
                 onChange={(e) => setNewKeywordName(e.target.value)}
-                placeholder={`Enter ${activeCategory?.label.toLowerCase().slice(0, -1)} name`}
+                placeholder={`Enter ${activeCategory?.singular.toLowerCase()} name`}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
               />
             </div>
@@ -404,7 +403,7 @@ export default function ManageKeywords() {
               Cancel
             </Button>
             <Button onClick={handleAddKeyword} disabled={!newKeywordName.trim()}>
-              Add {activeCategory?.label.slice(0, -1)}
+              Add {activeCategory?.singular}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -414,9 +413,9 @@ export default function ManageKeywords() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit {activeCategory?.label.slice(0, -1)}</DialogTitle>
+            <DialogTitle>Edit {activeCategory?.singular}</DialogTitle>
             <DialogDescription>
-              Update the name of this {activeCategory?.label.toLowerCase().slice(0, -1)}.
+              Update the name of this {activeCategory?.singular.toLowerCase()}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -426,7 +425,7 @@ export default function ManageKeywords() {
                 id="editKeyword"
                 value={editKeywordName}
                 onChange={(e) => setEditKeywordName(e.target.value)}
-                placeholder={`Enter ${activeCategory?.label.toLowerCase().slice(0, -1)} name`}
+                placeholder={`Enter ${activeCategory?.singular.toLowerCase()} name`}
                 onKeyDown={(e) => e.key === 'Enter' && handleEditKeyword()}
               />
             </div>
@@ -436,7 +435,7 @@ export default function ManageKeywords() {
               Cancel
             </Button>
             <Button onClick={handleEditKeyword} disabled={!editKeywordName.trim()}>
-              Update {activeCategory?.label.slice(0, -1)}
+              Update {activeCategory?.singular}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -446,7 +445,7 @@ export default function ManageKeywords() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete {activeCategory?.label.slice(0, -1)}</DialogTitle>
+            <DialogTitle>Delete {activeCategory?.singular}</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete "{selectedKeyword?.name}"? This action cannot be undone.
             </DialogDescription>
@@ -467,7 +466,7 @@ export default function ManageKeywords() {
               onClick={handleDeleteKeyword}
               disabled={selectedKeyword?.is_linked}
             >
-              Delete {activeCategory?.label.slice(0, -1)}
+              Delete {activeCategory?.singular}
             </Button>
           </DialogFooter>
         </DialogContent>
