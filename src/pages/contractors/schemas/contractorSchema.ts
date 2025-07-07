@@ -2,10 +2,10 @@
 import { z } from 'zod';
 
 export const contractorSchema = z.object({
-  // Basic info
-  full_name: z.string().min(1, 'Full name is required'),
-  email: z.string().email('Invalid email format'),
-  phone: z.string().regex(/^\+?[\d\s\(\)\-]{10,15}$/, 'Phone must be 10-15 digits'),
+  // Basic info - these should be required and not allow empty strings
+  full_name: z.string().min(1, 'Full name is required').trim(),
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
+  phone: z.string().min(1, 'Phone is required').regex(/^\+?[\d\s\(\)\-]{10,15}$/, 'Phone must be 10-15 digits'),
   
   // Location
   city: z.string().optional(),
@@ -16,14 +16,30 @@ export const contractorSchema = z.object({
   
   // Travel
   travel_anywhere: z.boolean(),
-  travel_radius_miles: z.coerce.number().positive('Travel radius must be greater than 0').optional(),
+  travel_radius_miles: z.string().optional().transform((val) => {
+    if (!val || val === '') return undefined;
+    const num = parseFloat(val);
+    return isNaN(num) ? undefined : num;
+  }),
   
   // Pay
   pay_type: z.enum(['W2', '1099']),
   prefers_hourly: z.boolean(),
-  hourly_rate: z.coerce.number().positive('Hourly rate must be greater than 0').optional(),
-  salary_lower: z.coerce.number().positive('Salary must be greater than 0').optional(),
-  salary_higher: z.coerce.number().positive('Salary must be greater than 0').optional(),
+  hourly_rate: z.string().optional().transform((val) => {
+    if (!val || val === '') return undefined;
+    const num = parseFloat(val);
+    return isNaN(num) ? undefined : num;
+  }),
+  salary_lower: z.string().optional().transform((val) => {
+    if (!val || val === '') return undefined;
+    const num = parseFloat(val);
+    return isNaN(num) ? undefined : num;
+  }),
+  salary_higher: z.string().optional().transform((val) => {
+    if (!val || val === '') return undefined;
+    const num = parseFloat(val);
+    return isNaN(num) ? undefined : num;
+  }),
   
   // Flags
   star_candidate: z.boolean(),

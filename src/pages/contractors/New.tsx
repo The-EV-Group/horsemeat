@@ -51,18 +51,29 @@ export default function NewContractor() {
     handleSubmit,
     watch,
     setValue,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting, isValid }
   } = useForm<ContractorFormData>({
     resolver: zodResolver(contractorSchema),
     defaultValues: {
+      full_name: '',
+      email: '',
+      phone: '',
+      city: '',
+      state: '',
       star_candidate: false,
       available: true,
       pay_type: 'W2',
       prefers_hourly: true,
       preferred_contact: 'email',
       travel_anywhere: false,
+      hourly_rate: '',
+      salary_lower: '',
+      salary_higher: '',
+      travel_radius_miles: '',
+      notes: '',
+      candidate_summary: '',
     },
-    mode: 'onBlur'
+    mode: 'onChange' // Change to onChange for immediate validation
   });
 
   const watchedValues = watch();
@@ -212,7 +223,7 @@ export default function NewContractor() {
           <Button
             type="submit"
             className="bg-primary hover:bg-primary/90"
-            disabled={isSubmitting || loading}
+            disabled={isSubmitting || loading || !isValid}
           >
             {isSubmitting ? (
               <>
