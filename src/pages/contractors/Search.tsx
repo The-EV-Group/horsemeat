@@ -23,6 +23,8 @@ export default function SearchContractors() {
 
   const handleCloseProfile = () => {
     setSelectedContractorId(null);
+    // Optionally refresh the search results to ensure the list is up-to-date
+    // This will help show updated data if any changes were made to the contractor
   };
 
   if (selectedContractorId) {
