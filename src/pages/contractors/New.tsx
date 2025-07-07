@@ -67,14 +67,14 @@ export default function NewContractor() {
       prefers_hourly: true,
       preferred_contact: 'email',
       travel_anywhere: false,
-      hourly_rate: '',
-      salary_lower: '',
-      salary_higher: '',
-      travel_radius_miles: '',
+      hourly_rate: undefined,
+      salary_lower: undefined,
+      salary_higher: undefined,
+      travel_radius_miles: undefined,
       notes: '',
       candidate_summary: '',
     },
-    mode: 'onChange' // Change to onChange for immediate validation
+    mode: 'onChange'
   });
 
   const watchedValues = watch();
