@@ -70,12 +70,12 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>State</Label>
-                <Select value={filters.state || ''} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value || undefined }))}>
+                <Select value={filters.state || 'any-state'} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value === 'any-state' ? undefined : value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select state (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Any State</SelectItem>
+                    <SelectItem value="any-state">Any State</SelectItem>
                     {US_STATES.map((state) => (
                       <SelectItem key={state} value={state}>
                         {state}

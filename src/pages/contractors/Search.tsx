@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,17 @@ export default function SearchContractors() {
   const [selectedContractor, setSelectedContractor] = useState<Contractor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Load all contractors on initial page load
+  useEffect(() => {
+    handleSearch({
+      skills: [],
+      industries: [],
+      certifications: [],
+      companies: [],
+      jobTitles: [],
+    });
+  }, []);
 
   const handleSearch = async (filters: any) => {
     await searchContractors(filters);
