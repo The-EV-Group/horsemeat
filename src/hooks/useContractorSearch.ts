@@ -125,22 +125,58 @@ export function useContractorSearch() {
 
   const deleteContractor = async (id: string) => {
     try {
-      // First delete related records to avoid foreign key constraints
-      await supabase.from('contractor_keyword').delete().eq('contractor_id', id);
-      await supabase.from('contractor_history').delete().eq('contractor_id', id);
-      await supabase.from('contractor_task').delete().eq('contractor_id', id);
+      console.log('Starting contractor deletion for ID:', id);
       
-      // Then delete the contractor
-      const { error } = await supabase
+      // Delete related records first to avoid foreign key constraints
+      const { error: keywordError } = await supabase
+        .from('contractor_keyword')
+        .delete()
+        .eq('contractor_id', id);
+      
+      if (keywordError) {
+        console.error('Error deleting contractor keywords:', keywordError);
+        throw keywordError;
+      }
+
+      const { error: historyError } = await supabase
+        .from('contractor_history')
+        .delete()
+        .eq('contractor_id', id);
+      
+      if (historyError) {
+        console.error('Error deleting contractor history:', historyError);
+        throw historyError;
+      }
+
+      const { error: taskError } = await supabase
+        .from('contractor_task')
+        .delete()
+        .eq('contractor_id', id);
+      
+      if (taskError) {
+        console.error('Error deleting contractor tasks:', taskError);
+        throw taskError;
+      }
+
+      // Finally delete the contractor
+      const { error: contractorError } = await supabase
         .from('contractor')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (contractorError) {
+        console.error('Error deleting contractor:', contractorError);
+        throw contractorError;
+      }
 
-      // Update local state
+      console.log('Contractor deletion completed successfully');
+      
+      // Update local state to remove the deleted contractor
       setContractors(prev => prev.filter(contractor => contractor.id !== id));
+      
+      return true;
     } catch (err) {
+      console.error('Error in deleteContractor:', err);
       throw err;
     }
   };

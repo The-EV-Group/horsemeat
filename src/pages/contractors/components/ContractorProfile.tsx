@@ -16,6 +16,8 @@ import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
 import type { Tables } from '@/integrations/supabase/types';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 type Contractor = Tables<'contractor'>;
 
@@ -25,6 +27,7 @@ interface ContractorProfileProps {
 }
 
 export function ContractorProfile({ contractorId, onClose }: ContractorProfileProps) {
+  const navigate = useNavigate();
   const {
     contractor: localContractor,
     history,
@@ -96,12 +99,24 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
   const handleDelete = async () => {
     try {
       setLoading(true);
+      console.log('Attempting to delete contractor:', localContractor.id);
+      
       await deleteContractor(localContractor.id);
-      clearSearch(); // Clear search results
-      onClose(); // Close profile and return to search
+      
+      console.log('Contractor deleted successfully, clearing search and redirecting');
+      clearSearch();
+      
+      toast.success('Contractor deleted successfully');
+      
+      // Close the dialog first
+      setShowDeleteDialog(false);
+      
+      // Navigate to search page
+      navigate('/contractors/search');
+      
     } catch (error) {
       console.error('Error deleting contractor:', error);
-      alert('Failed to delete contractor');
+      toast.error('Failed to delete contractor');
     } finally {
       setLoading(false);
     }
@@ -372,15 +387,15 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
           <DialogHeader>
             <DialogTitle>Delete Contractor</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {localContractor.full_name}? This action cannot be undone.
+              Are you sure you want to delete {localContractor.full_name}? This action cannot be undone and will remove all associated history and tasks.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={loading}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-              {loading ? 'Deleting...' : 'Delete'}
+              {loading ? 'Deleting...' : 'Delete Contractor'}
             </Button>
           </DialogFooter>
         </DialogContent>
