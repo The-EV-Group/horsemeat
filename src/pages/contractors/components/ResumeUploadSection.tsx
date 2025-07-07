@@ -28,20 +28,28 @@ export function ResumeUploadSection({
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileSelect = (file: File | null) => {
-    if (file) {
-      // Check if file is PDF
-      if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file only.');
-        return;
-      }
-      // Create a synthetic event for the file
-      const syntheticEvent = {
-        target: {
-          files: file ? [file] : null
-        }
-      } as React.ChangeEvent<HTMLInputElement>;
-      onFileChange(syntheticEvent);
+  const handleFileSelect = (file: File) => {
+    // Check if file is PDF
+    if (file.type !== 'application/pdf') {
+      alert('Please select a PDF file only.');
+      return;
+    }
+    
+    // Create a proper synthetic event that matches ChangeEvent<HTMLInputElement>
+    const input = document.getElementById('resume-upload') as HTMLInputElement;
+    if (input) {
+      // Create a new FileList-like object
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
+      
+      // Trigger the change event
+      const event = new Event('change', { bubbles: true });
+      Object.defineProperty(event, 'target', {
+        writable: false,
+        value: input
+      });
+      onFileChange(event as React.ChangeEvent<HTMLInputElement>);
     }
   };
 
