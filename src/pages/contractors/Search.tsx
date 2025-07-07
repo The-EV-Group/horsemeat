@@ -10,10 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Eye, Star, MapPin, DollarSign } from 'lucide-react';
 
 export default function SearchContractors() {
-  const { contractors, loading, searchContractors } = useContractorSearch();
+  const { contractors, loading, searchContractors, clearSearch } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
+  const [lastSearchFilters, setLastSearchFilters] = useState<any>(null);
 
   const handleSearch = (filters: any) => {
+    setLastSearchFilters(filters);
     searchContractors(filters);
   };
 
@@ -23,8 +25,13 @@ export default function SearchContractors() {
 
   const handleCloseProfile = () => {
     setSelectedContractorId(null);
-    // Optionally refresh the search results to ensure the list is up-to-date
-    // This will help show updated data if any changes were made to the contractor
+    // Refresh the search results if we had previous search filters
+    if (lastSearchFilters) {
+      searchContractors(lastSearchFilters);
+    } else {
+      // Clear search results if no previous search was performed
+      clearSearch();
+    }
   };
 
   if (selectedContractorId) {
