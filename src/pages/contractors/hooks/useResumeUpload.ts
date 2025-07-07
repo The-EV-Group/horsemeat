@@ -64,11 +64,17 @@ export function useResumeUpload() {
         throw error;
       }
       
-      // Get the public URL for the uploaded file
-      const { data } = supabase.storage.from('resumes').getPublicUrl(filePath);
+      // Get a signed URL for the uploaded file (valid for 30 days)
+      const { data } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 30);
       
-      setUploadedUrl(data.publicUrl);
-      return data.publicUrl;
+      if (!data) {
+        throw new Error('Failed to generate signed URL');
+      }
+      
+      setUploadedUrl(data.signedUrl);
+      return data.signedUrl;
     } catch (error) {
       toast({
         title: "Upload failed",

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,9 +122,33 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     }
   };
 
-  const handleResumeView = () => {
+  const handleResumeView = async () => {
     if (localContractor.resume_url) {
-      window.open(localContractor.resume_url, '_blank');
+      try {
+        // Extract the file path from the existing URL
+        // The URL format is like: .../storage/v1/object/sign/resumes/[filename]?token=...
+        const urlParts = localContractor.resume_url.split('/');
+        const filePathWithQuery = urlParts[urlParts.length - 1];
+        const filePath = filePathWithQuery.split('?')[0];
+        
+        // Generate a new signed URL that's valid for 30 minutes
+        const { data, error } = await supabase.storage
+          .from('resumes')
+          .createSignedUrl(filePath, 60 * 30); // 30 minutes
+        
+        if (error || !data) {
+          throw new Error('Failed to generate signed URL');
+        }
+        
+        // Open the new signed URL
+        window.open(data.signedUrl, '_blank');
+      } catch (error) {
+        console.error('Error generating signed URL:', error);
+        toast.error('Failed to open resume. Please try again.');
+        
+        // Fallback to the stored URL if we can't generate a new one
+        window.open(localContractor.resume_url, '_blank');
+      }
     }
   };
 
