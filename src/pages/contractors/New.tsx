@@ -105,7 +105,8 @@ export default function NewContractor() {
         salary_higher: !data.prefers_hourly ? data.salary_higher || null : null,
         star_candidate: data.star_candidate,
         available: data.available,
-        notes: [data.notes, data.candidate_summary].filter(Boolean).join('\n\n') || null,
+        notes: data.notes || null,
+        summary: data.candidate_summary || null,
         resume_url: resumeUrl || null,
       };
       
@@ -243,7 +244,7 @@ export default function NewContractor() {
                 Creating...
               </>
             ) : (
-              'Create Contractor'
+              'Create Contractor' 
             )}
           </Button>
         </div>

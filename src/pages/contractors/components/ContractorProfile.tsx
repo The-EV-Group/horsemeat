@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Download, Trash2, Star, Phone, Mail, MapPin } from 'lucide-react';
+import { Edit, Download, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText } from 'lucide-react';
 import { US_STATES } from '../schemas/contractorSchema';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -27,6 +27,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
   const [editValue, setEditValue] = useState<any>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [localContractor, setLocalContractor] = useState<Contractor>(contractor);
 
   const handleEdit = (field: string, currentValue: any) => {
     setEditField(field);
@@ -38,7 +39,11 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
     
     try {
       setLoading(true);
-      await onUpdate(contractor.id, { [editField]: editValue });
+      await onUpdate(localContractor.id, { [editField]: editValue });
+      
+      // Update local state immediately
+      setLocalContractor(prev => ({ ...prev, [editField]: editValue }));
+      
       setEditField(null);
       setEditValue('');
     } catch (error) {
@@ -52,7 +57,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
   const handleDelete = async () => {
     try {
       setLoading(true);
-      await onDelete(contractor.id);
+      await onDelete(localContractor.id);
       onClose();
     } catch (error) {
       console.error('Error deleting contractor:', error);
@@ -64,7 +69,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
 
   const downloadProfile = () => {
     const profileData = {
-      ...contractor,
+      ...localContractor,
       downloaded_at: new Date().toISOString()
     };
     
@@ -72,33 +77,40 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${contractor.full_name || 'contractor'}_profile.json`;
+    a.download = `${localContractor.full_name || 'contractor'}_profile.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
+  const handleResumeView = () => {
+    if (localContractor.resume_url) {
+      window.open(localContractor.resume_url, '_blank');
+    }
+  };
+
   const renderEditableField = (field: string, label: string, value: any, type: 'text' | 'number' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' = 'text', options?: string[]) => (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="font-medium">{label}</Label>
+        <Label className="font-medium text-gray-700">{label}</Label>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => handleEdit(field, value)}
-          className="h-8 w-8 p-0"
+          className="h-8 w-8 p-0 hover:bg-gray-100"
         >
           <Edit className="h-4 w-4" />
         </Button>
       </div>
       {editField === field ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {type === 'textarea' ? (
             <Textarea
-              value={editValue}
+              value={editValue || ''}
               onChange={(e) => setEditValue(e.target.value)}
               rows={3}
+              className="resize-none"
             />
           ) : type === 'select' ? (
             <Select value={editValue || ''} onValueChange={setEditValue}>
@@ -119,13 +131,14 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
                 checked={editValue}
                 onCheckedChange={setEditValue}
               />
-              <span>Yes</span>
+              <span className="text-sm">Yes</span>
             </div>
           ) : (
             <Input
               type={type}
-              value={editValue}
+              value={editValue || ''}
               onChange={(e) => setEditValue(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
+              className="w-full"
             />
           )}
           <div className="flex gap-2">
@@ -138,11 +151,11 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
           </div>
         </div>
       ) : (
-        <div className="min-h-[20px] p-2 bg-gray-50 rounded">
+        <div className="min-h-[40px] p-3 bg-gray-50 rounded-md border">
           {type === 'checkbox' ? (
-            value ? 'Yes' : 'No'
+            <span className="text-sm">{value ? 'Yes' : 'No'}</span>
           ) : (
-            value || <span className="text-gray-400">Not provided</span>
+            <span className="text-sm">{value || <span className="text-gray-400 italic">Not provided</span>}</span>
           )}
         </div>
       )}
@@ -150,105 +163,136 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
   );
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">{contractor.full_name}</h2>
-          {contractor.star_candidate && (
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-              <Star className="w-3 h-3 mr-1" />
-              Star Candidate
-            </Badge>
-          )}
-          <Badge variant={contractor.available ? 'default' : 'secondary'}>
-            {contractor.available ? 'Available' : 'Unavailable'}
-          </Badge>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={downloadProfile}>
-            <Download className="mr-2 h-4 w-4" />
-            Download
-          </Button>
-          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete
-          </Button>
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <User className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{localContractor.full_name}</h1>
+              <div className="flex items-center gap-3 mt-2">
+                {localContractor.star_candidate && (
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                    <Star className="w-3 h-3 mr-1" />
+                    Star Candidate
+                  </Badge>
+                )}
+                <Badge variant={localContractor.available ? 'default' : 'secondary'}>
+                  {localContractor.available ? 'Available' : 'Unavailable'}
+                </Badge>
+                <Badge variant="outline">{localContractor.pay_type}</Badge>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={downloadProfile}>
+              <Download className="mr-2 h-4 w-4" />
+              Download
+            </Button>
+            <Button variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </Button>
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
+        {/* Contact Information */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Mail className="h-5 w-5 text-primary" />
               Contact Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {renderEditableField('full_name', 'Full Name', contractor.full_name)}
-            {renderEditableField('email', 'Email', contractor.email, 'email')}
-            {renderEditableField('phone', 'Phone', contractor.phone, 'tel')}
-            {renderEditableField('preferred_contact', 'Preferred Contact', contractor.preferred_contact, 'select', ['email', 'phone', 'text'])}
+            {renderEditableField('full_name', 'Full Name', localContractor.full_name)}
+            {renderEditableField('email', 'Email', localContractor.email, 'email')}
+            {renderEditableField('phone', 'Phone', localContractor.phone, 'tel')}
+            {renderEditableField('preferred_contact', 'Preferred Contact', localContractor.preferred_contact, 'select', ['email', 'phone', 'text'])}
           </CardContent>
         </Card>
 
-        {/* Location */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
+        {/* Location & Travel */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <MapPin className="h-5 w-5 text-primary" />
               Location & Travel
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {renderEditableField('city', 'City', contractor.city)}
-            {renderEditableField('state', 'State', contractor.state, 'select', US_STATES)}
-            {renderEditableField('travel_anywhere', 'Willing to Travel Anywhere', contractor.travel_anywhere, 'checkbox')}
-            {!contractor.travel_anywhere && renderEditableField('travel_radius_miles', 'Travel Radius (miles)', contractor.travel_radius_miles, 'number')}
+            {renderEditableField('city', 'City', localContractor.city)}
+            {renderEditableField('state', 'State', localContractor.state, 'select', US_STATES)}
+            {renderEditableField('travel_anywhere', 'Willing to Travel Anywhere', localContractor.travel_anywhere, 'checkbox')}
+            {!localContractor.travel_anywhere && renderEditableField('travel_radius_miles', 'Travel Radius (miles)', localContractor.travel_radius_miles, 'number')}
           </CardContent>
         </Card>
 
         {/* Pay Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pay Information</CardTitle>
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Pay Information
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {renderEditableField('pay_type', 'Pay Type', contractor.pay_type, 'select', ['W2', '1099'])}
-            {renderEditableField('prefers_hourly', 'Prefers Hourly', contractor.prefers_hourly, 'checkbox')}
-            {contractor.prefers_hourly ? (
-              renderEditableField('hourly_rate', 'Hourly Rate ($)', contractor.hourly_rate, 'number')
+            {renderEditableField('pay_type', 'Pay Type', localContractor.pay_type, 'select', ['W2', '1099'])}
+            {renderEditableField('prefers_hourly', 'Prefers Hourly', localContractor.prefers_hourly, 'checkbox')}
+            {localContractor.prefers_hourly ? (
+              renderEditableField('hourly_rate', 'Hourly Rate ($)', localContractor.hourly_rate, 'number')
             ) : (
               <>
-                {renderEditableField('salary_lower', 'Minimum Salary ($)', contractor.salary_lower, 'number')}
-                {renderEditableField('salary_higher', 'Maximum Salary ($)', contractor.salary_higher, 'number')}
+                {renderEditableField('salary_lower', 'Minimum Salary ($)', localContractor.salary_lower, 'number')}
+                {renderEditableField('salary_higher', 'Maximum Salary ($)', localContractor.salary_higher, 'number')}
               </>
             )}
           </CardContent>
         </Card>
 
-        {/* Additional Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
+        {/* Status & Flags */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Star className="h-5 w-5 text-primary" />
+              Status & Flags
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {renderEditableField('star_candidate', 'Star Candidate', contractor.star_candidate, 'checkbox')}
-            {renderEditableField('available', 'Available', contractor.available, 'checkbox')}
-            {renderEditableField('notes', 'Notes', contractor.notes, 'textarea')}
-            {contractor.resume_url && (
-              <div className="space-y-2">
-                <Label className="font-medium">Resume</Label>
-                <Button variant="outline" asChild>
-                  <a href={contractor.resume_url} target="_blank" rel="noopener noreferrer">
+            {renderEditableField('star_candidate', 'Star Candidate', localContractor.star_candidate, 'checkbox')}
+            {renderEditableField('available', 'Available', localContractor.available, 'checkbox')}
+          </CardContent>
+        </Card>
+
+        {/* Notes & Summary */}
+        <Card className="lg:col-span-2 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5 text-primary" />
+              Notes & Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {renderEditableField('notes', 'Goals / Interests', localContractor.notes, 'textarea')}
+            {renderEditableField('summary', 'Candidate Summary', localContractor.summary, 'textarea')}
+            
+            {localContractor.resume_url && (
+              <div className="space-y-3">
+                <Label className="font-medium text-gray-700">Resume</Label>
+                <div className="p-3 bg-gray-50 rounded-md border">
+                  <Button variant="outline" onClick={handleResumeView}>
+                    <FileText className="mr-2 h-4 w-4" />
                     View Resume
-                  </a>
-                </Button>
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -261,7 +305,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
           <DialogHeader>
             <DialogTitle>Delete Contractor</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete {contractor.full_name}? This action cannot be undone.
+              Are you sure you want to delete {localContractor.full_name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

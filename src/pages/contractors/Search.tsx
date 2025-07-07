@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { SearchFilters } from './components/SearchFilters';
 import { ContractorProfile } from './components/ContractorProfile';
 import { useContractorSearch } from '@/hooks/useContractorSearch';
-import { Search, Star, MapPin, DollarSign, Phone, Mail } from 'lucide-react';
+import { Search, Star, MapPin, DollarSign, Phone, Mail, User } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Contractor = Tables<'contractor'>;
@@ -115,63 +115,81 @@ export default function SearchContractors() {
                   >
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <h3 className="text-lg font-semibold">{contractor.full_name}</h3>
-                            <div className="flex gap-2">
-                              {contractor.star_candidate && (
-                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                  <Star className="w-3 h-3 mr-1" />
-                                  Star
+                        <div className="flex items-start gap-4 flex-1">
+                          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                            <User className="w-6 h-6 text-primary" />
+                          </div>
+                          
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <h3 className="text-lg font-semibold">{contractor.full_name}</h3>
+                              <div className="flex gap-2">
+                                {contractor.star_candidate && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                    <Star className="w-3 h-3 mr-1" />
+                                    Star
+                                  </Badge>
+                                )}
+                                <Badge variant={contractor.available ? 'default' : 'secondary'}>
+                                  {contractor.available ? 'Available' : 'Unavailable'}
                                 </Badge>
+                                <Badge variant="outline">{contractor.pay_type}</Badge>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                              {/* Contact Information */}
+                              {contractor.email && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Mail className="h-4 w-4" />
+                                  <span>{contractor.email}</span>
+                                </div>
                               )}
-                              <Badge variant={contractor.available ? 'default' : 'secondary'}>
-                                {contractor.available ? 'Available' : 'Unavailable'}
-                              </Badge>
+                              
+                              {contractor.phone && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <Phone className="h-4 w-4" />
+                                  <span>{contractor.phone}</span>
+                                </div>
+                              )}
+
+                              {/* Location */}
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <MapPin className="h-4 w-4" />
+                                <span>
+                                  {contractor.city && contractor.state 
+                                    ? `${contractor.city}, ${contractor.state}`
+                                    : contractor.state || 'Location not specified'
+                                  }
+                                </span>
+                              </div>
+                              
+                              {/* Pay Information */}
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <DollarSign className="h-4 w-4" />
+                                <span>
+                                  {contractor.prefers_hourly 
+                                    ? `$${contractor.hourly_rate || 0}/hr`
+                                    : `$${contractor.salary_lower || 0} - $${contractor.salary_higher || 0}/yr`
+                                  }
+                                </span>
+                              </div>
+
+                              {/* Preferred Contact */}
+                              <div className="flex items-center gap-2 text-gray-600">
+                                {contractor.preferred_contact === 'email' ? (
+                                  <Mail className="h-4 w-4" />
+                                ) : contractor.preferred_contact === 'phone' ? (
+                                  <Phone className="h-4 w-4" />
+                                ) : (
+                                  <Phone className="h-4 w-4" />
+                                )}
+                                <span>
+                                  Prefers {contractor.preferred_contact}
+                                </span>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              <span>
-                                {contractor.city && contractor.state 
-                                  ? `${contractor.city}, ${contractor.state}`
-                                  : contractor.state || 'Location not specified'
-                                }
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <DollarSign className="h-4 w-4" />
-                              <span>
-                                {contractor.prefers_hourly 
-                                  ? `$${contractor.hourly_rate || 0}/hr`
-                                  : `$${contractor.salary_lower || 0} - $${contractor.salary_higher || 0}/yr`
-                                }
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              {contractor.preferred_contact === 'email' ? (
-                                <Mail className="h-4 w-4" />
-                              ) : (
-                                <Phone className="h-4 w-4" />
-                              )}
-                              <span>
-                                {contractor.preferred_contact === 'email' 
-                                  ? contractor.email 
-                                  : contractor.phone || 'No contact info'
-                                }
-                              </span>
-                            </div>
-                          </div>
-
-                          {contractor.notes && (
-                            <p className="mt-3 text-sm text-gray-600 line-clamp-2">
-                              {contractor.notes}
-                            </p>
-                          )}
                         </div>
 
                         <Button variant="outline" size="sm">

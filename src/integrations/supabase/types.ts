@@ -33,6 +33,7 @@ export type Database = {
           salary_lower: number | null
           star_candidate: boolean | null
           state: string | null
+          summary: string | null
           travel_anywhere: boolean
           travel_radius_miles: number | null
         }
@@ -54,6 +55,7 @@ export type Database = {
           salary_lower?: number | null
           star_candidate?: boolean | null
           state?: string | null
+          summary?: string | null
           travel_anywhere?: boolean
           travel_radius_miles?: number | null
         }
@@ -75,6 +77,7 @@ export type Database = {
           salary_lower?: number | null
           star_candidate?: boolean | null
           state?: string | null
+          summary?: string | null
           travel_anywhere?: boolean
           travel_radius_miles?: number | null
         }

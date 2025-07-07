@@ -37,14 +37,18 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
       return;
     }
 
-    // Validate pay ranges
+    // Validate pay ranges - allow 0 as minimum
     if (filters.payType === 'hourly' || filters.payType === 'salary') {
-      if (!filters.payMin || !filters.payMax) {
+      if (filters.payMin === undefined || filters.payMax === undefined) {
         alert('Please enter both minimum and maximum pay values');
         return;
       }
-      if (filters.payMin >= filters.payMax) {
-        alert('Minimum pay must be less than maximum pay');
+      if (filters.payMin < 0 || filters.payMax < 0) {
+        alert('Pay values must be 0 or greater');
+        return;
+      }
+      if (filters.payMin > filters.payMax) {
+        alert('Minimum pay must be less than or equal to maximum pay');
         return;
       }
     }
@@ -125,6 +129,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
                   <Input
                     type="number"
                     placeholder="0"
+                    min="0"
                     value={filters.payMin || ''}
                     onChange={(e) => setFilters(prev => ({ ...prev, payMin: e.target.value ? parseFloat(e.target.value) : undefined }))}
                   />
@@ -134,6 +139,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
                   <Input
                     type="number"
                     placeholder="0"
+                    min="0"
                     value={filters.payMax || ''}
                     onChange={(e) => setFilters(prev => ({ ...prev, payMax: e.target.value ? parseFloat(e.target.value) : undefined }))}
                   />

@@ -58,31 +58,31 @@ export const contractorSchema = z.object({
     });
   }
   
-  // Pay validation - check based on preference
+  // Pay validation - check based on preference - ALLOW 0 as minimum
   if (data.prefers_hourly) {
-    if (!data.hourly_rate || data.hourly_rate <= 0) {
+    if (data.hourly_rate === undefined || data.hourly_rate < 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Hourly rate is required',
+        message: 'Hourly rate is required and must be 0 or greater',
         path: ['hourly_rate'],
       });
     }
   } else {
-    if (!data.salary_lower || data.salary_lower <= 0) {
+    if (data.salary_lower === undefined || data.salary_lower < 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Minimum salary is required',
+        message: 'Minimum salary is required and must be 0 or greater',
         path: ['salary_lower'],
       });
     }
-    if (!data.salary_higher || data.salary_higher <= 0) {
+    if (data.salary_higher === undefined || data.salary_higher < 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Maximum salary is required',
+        message: 'Maximum salary is required and must be 0 or greater',
         path: ['salary_higher'],
       });
     }
-    if (data.salary_lower && data.salary_higher && data.salary_lower > data.salary_higher) {
+    if (data.salary_lower !== undefined && data.salary_higher !== undefined && data.salary_lower > data.salary_higher) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Minimum salary must be less than or equal to maximum salary',
