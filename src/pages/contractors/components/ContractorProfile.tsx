@@ -16,7 +16,6 @@ import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
 import type { Tables } from '@/integrations/supabase/types';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type Contractor = Tables<'contractor'>;
@@ -27,7 +26,6 @@ interface ContractorProfileProps {
 }
 
 export function ContractorProfile({ contractorId, onClose }: ContractorProfileProps) {
-  const navigate = useNavigate();
   const {
     contractor: localContractor,
     history,
@@ -42,7 +40,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     deleteTask
   } = useContractorData(contractorId);
 
-  const { deleteContractor, clearSearch } = useContractorSearch();
+  const { deleteContractor } = useContractorSearch();
 
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<any>('');
@@ -103,16 +101,15 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
       
       await deleteContractor(localContractor.id);
       
-      console.log('Contractor deleted successfully, clearing search and redirecting');
-      clearSearch();
+      console.log('Contractor deleted successfully');
       
       toast.success('Contractor deleted successfully');
       
       // Close the dialog first
       setShowDeleteDialog(false);
       
-      // Navigate to search page
-      navigate('/contractors/search');
+      // Use the onClose callback to properly close the profile and clear search
+      onClose();
       
     } catch (error) {
       console.error('Error deleting contractor:', error);
