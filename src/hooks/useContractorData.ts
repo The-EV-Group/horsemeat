@@ -74,7 +74,7 @@ export function useContractorData(contractorId: string) {
           internal_employee!fk_created_by_employee(full_name)
         `)
         .eq('contractor_id', contractorId)
-        .order('due_date', { ascending: true, nullsLast: true });
+        .order('due_date', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       

@@ -8,35 +8,67 @@ import { FileText, Upload, X } from 'lucide-react';
 
 interface ResumeUploadSectionProps {
   resumeFile: File | null;
-  resumeUrl: string;
-  onFileSelect: (file: File | null) => void;
-  onUrlChange: (url: string) => void;
-  isUploading: boolean;
+  resumeUrl?: string;
+  uploadProgress?: number;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveFile: () => void;
+  onUrlChange?: (url: string) => void;
+  isUploading?: boolean;
 }
 
 export function ResumeUploadSection({
   resumeFile,
-  resumeUrl,
-  onFileSelect,
-  onUrlChange,
-  isUploading
+  resumeUrl = '',
+  uploadProgress = 0,
+  onFileChange,
+  onRemoveFile,
+  onUrlChange = () => {},
+  isUploading = false
 }: ResumeUploadSectionProps) {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFileSelect = (file: File | null) => {
     if (file) {
       // Check if file is PDF
       if (file.type !== 'application/pdf') {
         alert('Please select a PDF file only.');
         return;
       }
-      onFileSelect(file);
+      // Create a synthetic event for the file
+      const syntheticEvent = {
+        target: {
+          files: file ? [file] : null
+        }
+      } as React.ChangeEvent<HTMLInputElement>;
+      onFileChange(syntheticEvent);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const file = files[0];
+    
+    if (file) {
+      handleFileSelect(file);
     }
   };
 
   const clearFile = () => {
-    onFileSelect(null);
+    onRemoveFile();
     // Reset the input
     const input = document.getElementById('resume-upload') as HTMLInputElement;
     if (input) input.value = '';
@@ -75,22 +107,34 @@ export function ResumeUploadSection({
 
         {uploadMethod === 'file' && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Label htmlFor="resume-upload" className="cursor-pointer">
-                <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-md hover:border-gray-400 transition-colors">
-                  <Upload className="h-4 w-4" />
-                  <span className="text-sm">Click to upload PDF</span>
-                </div>
-              </Label>
-              <Input
-                id="resume-upload"
-                type="file"
-                accept=".pdf,application/pdf"
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={isUploading}
-              />
+            <div
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                isDragging
+                  ? 'border-primary bg-primary/10'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('resume-upload')?.click()}
+            >
+              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm text-gray-600 mb-1">
+                Drag and drop your PDF resume here, or click to browse
+              </p>
+              <p className="text-xs text-gray-500">
+                Only PDF files are accepted
+              </p>
             </div>
+            
+            <Input
+              id="resume-upload"
+              type="file"
+              accept=".pdf,application/pdf"
+              onChange={onFileChange}
+              className="hidden"
+              disabled={isUploading}
+            />
             
             {resumeFile && (
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md border">
@@ -115,9 +159,17 @@ export function ResumeUploadSection({
               </div>
             )}
             
-            {isUploading && (
-              <div className="text-sm text-gray-600">
-                Uploading resume...
+            {isUploading && uploadProgress > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">
+                  Uploading resume... {uploadProgress}%
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
               </div>
             )}
           </div>

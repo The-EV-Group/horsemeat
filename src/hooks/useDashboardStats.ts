@@ -61,7 +61,7 @@ export function useDashboardStats() {
           contractor(full_name)
         `)
         .or(`is_public.eq.true,created_by.eq.${user?.id}`)
-        .order('due_date', { ascending: true, nullsLast: true });
+        .order('due_date', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
 

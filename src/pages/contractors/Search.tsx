@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { SearchFilters } from './components/SearchFilters';
@@ -41,7 +40,7 @@ export default function SearchContractors() {
         <p className="text-gray-600">Find and manage your contractor network</p>
       </div>
 
-      <SearchFilters onSearch={handleSearch} />
+      <SearchFilters onSearch={handleSearch} loading={loading} />
 
       <Card>
         <CardHeader>

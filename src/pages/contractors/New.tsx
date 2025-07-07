@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -185,6 +184,7 @@ export default function NewContractor() {
           uploadProgress={uploadProgress}
           onFileChange={handleFileChange}
           onRemoveFile={removeFile}
+          isUploading={loading}
         />
 
         <BasicInfoSection
