@@ -34,8 +34,23 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
     setEditValue(currentValue);
   };
 
+  const canSave = () => {
+    // Special validation for travel_anywhere field
+    if (editField === 'travel_anywhere' && !editValue) {
+      // If unchecking travel_anywhere, require travel_radius_miles
+      return localContractor.travel_radius_miles !== null && localContractor.travel_radius_miles !== undefined;
+    }
+    
+    // Special validation for travel_radius_miles when travel_anywhere is false
+    if (editField === 'travel_radius_miles' && !localContractor.travel_anywhere) {
+      return editValue !== null && editValue !== undefined && editValue !== '';
+    }
+    
+    return true;
+  };
+
   const handleSave = async () => {
-    if (!editField) return;
+    if (!editField || !canSave()) return;
     
     try {
       setLoading(true);
@@ -91,7 +106,7 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
   };
 
   const renderEditableField = (field: string, label: string, value: any, type: 'text' | 'number' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' = 'text', options?: string[]) => (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="font-medium text-gray-700">{label}</Label>
         <Button
@@ -141,8 +156,27 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
               className="w-full"
             />
           )}
+          
+          {/* Show validation message for travel_anywhere */}
+          {editField === 'travel_anywhere' && !editValue && (localContractor.travel_radius_miles === null || localContractor.travel_radius_miles === undefined) && (
+            <p className="text-sm text-red-600">
+              Please set a travel radius before unchecking "willing to travel anywhere"
+            </p>
+          )}
+          
+          {/* Show validation message for travel_radius_miles */}
+          {editField === 'travel_radius_miles' && !localContractor.travel_anywhere && (editValue === null || editValue === undefined || editValue === '') && (
+            <p className="text-sm text-red-600">
+              Travel radius is required when not willing to travel anywhere
+            </p>
+          )}
+          
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSave} disabled={loading}>
+            <Button 
+              size="sm" 
+              onClick={handleSave} 
+              disabled={loading || !canSave()}
+            >
               Save
             </Button>
             <Button size="sm" variant="outline" onClick={() => setEditField(null)}>
@@ -151,11 +185,11 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
           </div>
         </div>
       ) : (
-        <div className="min-h-[40px] p-3 bg-gray-50 rounded-md border">
+        <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border text-sm">
           {type === 'checkbox' ? (
-            <span className="text-sm">{value ? 'Yes' : 'No'}</span>
+            <span>{value ? 'Yes' : 'No'}</span>
           ) : (
-            <span className="text-sm">{value || <span className="text-gray-400 italic">Not provided</span>}</span>
+            <span>{value || <span className="text-gray-400 italic">Not provided</span>}</span>
           )}
         </div>
       )}
@@ -285,9 +319,9 @@ export function ContractorProfile({ contractor, onUpdate, onDelete, onClose }: C
             {renderEditableField('summary', 'Candidate Summary', localContractor.summary, 'textarea')}
             
             {localContractor.resume_url && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <Label className="font-medium text-gray-700">Resume</Label>
-                <div className="p-3 bg-gray-50 rounded-md border">
+                <div className="p-2 bg-gray-50 rounded-md border">
                   <Button variant="outline" onClick={handleResumeView}>
                     <FileText className="mr-2 h-4 w-4" />
                     View Resume
