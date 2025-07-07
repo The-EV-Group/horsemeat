@@ -43,13 +43,26 @@ export function ResumeUploadSection({
       dataTransfer.items.add(file);
       input.files = dataTransfer.files;
       
-      // Trigger the change event
-      const event = new Event('change', { bubbles: true });
-      Object.defineProperty(event, 'target', {
-        writable: false,
-        value: input
-      });
-      onFileChange(event as React.ChangeEvent<HTMLInputElement>);
+      // Create a synthetic React change event
+      const syntheticEvent = {
+        target: input,
+        currentTarget: input,
+        type: 'change',
+        bubbles: true,
+        cancelable: true,
+        defaultPrevented: false,
+        eventPhase: 2,
+        isTrusted: true,
+        nativeEvent: new Event('change'),
+        timeStamp: Date.now(),
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        isDefaultPrevented: () => false,
+        isPropagationStopped: () => false,
+        persist: () => {}
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      onFileChange(syntheticEvent);
     }
   };
 
