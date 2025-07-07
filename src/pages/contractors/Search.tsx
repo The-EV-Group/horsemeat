@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { SearchFilters } from './components/SearchFilters';
 import { ContractorProfile } from './components/ContractorProfile';
@@ -8,11 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Eye, Star, MapPin, DollarSign } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 export default function SearchContractors() {
   const { contractors, loading, searchContractors, clearSearch } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
   const [lastSearchFilters, setLastSearchFilters] = useState<any>(null);
+  const location = useLocation();
+
+  // Check if we should open a specific contractor profile on load
+  useEffect(() => {
+    if (location.state?.openProfile) {
+      setSelectedContractorId(location.state.openProfile);
+      // Clear the navigation state to prevent reopening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleSearch = (filters: any) => {
     setLastSearchFilters(filters);
