@@ -1,4 +1,3 @@
-
 import { Sidebar } from './Sidebar';
 
 interface LayoutProps {

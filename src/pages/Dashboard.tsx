@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { useAuth } from '@/hooks/auth/useAuth';
+import { useDashboardStats } from '@/hooks/dashboard/useDashboardStats';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

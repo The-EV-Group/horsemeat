@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { KeywordSelect } from '@/components/KeywordSelect';
+import { KeywordSelect } from '@/components/keywords/KeywordSelect';
 import { Edit, Save, X } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 
