@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FormTextarea } from '@/components/FormInput';
+import { FormTextarea } from '@/components/shared/FormInput';
 import type { UseFormRegister } from 'react-hook-form';
 import type { ContractorFormData } from '../schemas/contractorSchema';
 

@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { FormInput } from '@/components/FormInput';
+import { FormInput } from '@/components/shared/FormInput';
 import type { UseFormRegister, FieldErrors } from 'react-hook-form';
 import type { ContractorFormData } from '../schemas/contractorSchema';
 

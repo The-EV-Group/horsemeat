@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useContractorSearch } from '@/hooks/useContractorSearch';
+import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
 import { SearchFilters } from './components/SearchFilters';
 import { ContractorProfile } from './components/ContractorProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
