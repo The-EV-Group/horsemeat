@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { FormInput } from '@/components/shared/FormInput';
+import { FormInput } from '@/components/FormInput';
 import type { UseFormRegister, FieldErrors } from 'react-hook-form';
 import type { ContractorFormData } from '../schemas/contractorSchema';
 

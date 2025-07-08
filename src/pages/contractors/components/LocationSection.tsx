@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { FormInput } from '@/components/shared/FormInput';
+import { FormInput } from '@/components/FormInput';
 import type { UseFormRegister } from 'react-hook-form';
 import type { ContractorFormData } from '../schemas/contractorSchema';
 import { US_STATES } from '../schemas/contractorSchema';

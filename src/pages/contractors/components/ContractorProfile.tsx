@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags } from 'lucide-react';
 import { US_STATES } from '../schemas/contractorSchema';
-import { useContractorData } from '@/hooks/contractors/useContractorData';
-import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
+import { useContractorData } from '@/hooks/useContractorData';
+import { useContractorSearch } from '@/hooks/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
 import { ProfileKeywordsSection } from './ProfileKeywordsSection';

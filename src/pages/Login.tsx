@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/auth/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FormInput } from '@/components/shared/FormInput';
+import { FormInput } from '@/components/FormInput';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function Login() {

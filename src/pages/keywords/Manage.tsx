@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Search, Plus, Edit, Trash, Link2, Info } from 'lucide-react';
-import { useKeywords } from '@/hooks/keywords/useKeywords';
+import { useKeywords } from '@/hooks/useKeywords';
 import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/shared/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Keyword = Tables<'keyword'>;
