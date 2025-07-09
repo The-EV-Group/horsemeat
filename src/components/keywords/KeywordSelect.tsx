@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -39,7 +40,6 @@ export function KeywordSelect({
   const handleSearchChange = useCallback(async (term: string) => {
     setSearchTerm(term);
     
-    // Our useKeywords hook now handles debouncing internally
     if (term.trim()) {
       const results = await searchKeywords(term, category);
       setSearchResults(results);
@@ -49,6 +49,12 @@ export function KeywordSelect({
   }, [searchKeywords, category]);
   
   const handleSelect = useCallback((keyword: KeywordType) => {
+    // Check if keyword is already selected (prevent duplicates)
+    const isAlreadySelected = value.some(k => k.id === keyword.id);
+    if (isAlreadySelected) {
+      return;
+    }
+    
     onChange([...value, keyword]);
     setSearchTerm('');
     setSearchResults([]);
@@ -61,6 +67,12 @@ export function KeywordSelect({
   
   const handleCreateNew = useCallback(async () => {
     if (!searchTerm.trim() || !category) return;
+    
+    // Check if keyword with same name already exists in selected values
+    const existsInSelected = value.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase());
+    if (existsInSelected) {
+      return;
+    }
     
     try {
       const newKeyword = await createKeyword(searchTerm, category);
@@ -80,7 +92,7 @@ export function KeywordSelect({
     );
   }, [searchResults, value]);
   
-  // Check if we can create a new keyword
+  // Check if we can create a new keyword (not already selected and doesn't exist in results)
   const canCreateNew = searchTerm.trim() && 
     !searchResults.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase()) &&
     !value.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase());

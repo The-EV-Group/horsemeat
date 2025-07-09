@@ -24,12 +24,6 @@ interface ContractorData {
   owner_id: string | null;
   resume_url: string | null;
   notes: string | null;
-  keywords: Array<{
-    id: string;
-    name: string;
-    category: string;
-    note?: string;
-  }>;
 }
 
 interface Task {
@@ -80,6 +74,13 @@ export function useContractorData(contractorId: string) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [employees, setEmployees] = useState<InternalEmployee[]>([]);
+  const [keywords, setKeywords] = useState<CategorizedKeywords>({
+    skills: [],
+    industries: [],
+    certifications: [],
+    companies: [],
+    'job titles': []
+  });
   const [loading, setLoading] = useState(true);
 
   const fetchContractor = async () => {
@@ -91,30 +92,50 @@ export function useContractorData(contractorId: string) {
         .single();
 
       if (contractorError) throw contractorError;
+      setContractor(contractorData);
+    } catch (error) {
+      console.error('Error fetching contractor:', error);
+    }
+  };
 
+  const fetchKeywords = async () => {
+    try {
       const { data: keywordData, error: keywordError } = await supabase
         .from('contractor_keyword')
         .select(`
           note,
-          keyword(id, name, category)
+          keyword(id, name, category, inserted_at)
         `)
         .eq('contractor_id', contractorId);
 
       if (keywordError) throw keywordError;
 
-      const keywords = keywordData?.map(item => ({
-        id: item.keyword.id,
-        name: item.keyword.name,
-        category: item.keyword.category,
-        note: item.note || undefined
-      })) || [];
+      // Transform to categorized structure
+      const categorized: CategorizedKeywords = {
+        skills: [],
+        industries: [],
+        certifications: [],
+        companies: [],
+        'job titles': []
+      };
 
-      setContractor({
-        ...contractorData,
-        keywords
+      keywordData?.forEach(item => {
+        if (item.keyword) {
+          const category = item.keyword.category as keyof CategorizedKeywords;
+          if (categorized[category]) {
+            categorized[category].push({
+              id: item.keyword.id,
+              name: item.keyword.name,
+              category: item.keyword.category,
+              inserted_at: item.keyword.inserted_at
+            });
+          }
+        }
       });
+
+      setKeywords(categorized);
     } catch (error) {
-      console.error('Error fetching contractor:', error);
+      console.error('Error fetching keywords:', error);
     }
   };
 
@@ -229,46 +250,11 @@ export function useContractorData(contractorId: string) {
         if (insertError) throw insertError;
       }
 
-      await fetchContractor();
+      await fetchKeywords();
     } catch (error) {
       console.error('Error updating keywords:', error);
       throw error;
     }
-  };
-
-  // Transform flat keywords array to categorized structure
-  const getCategorizedKeywords = (): CategorizedKeywords => {
-    if (!contractor?.keywords) {
-      return {
-        skills: [],
-        industries: [],
-        certifications: [],
-        companies: [],
-        'job titles': []
-      };
-    }
-
-    const categorized: CategorizedKeywords = {
-      skills: [],
-      industries: [],
-      certifications: [],
-      companies: [],
-      'job titles': []
-    };
-
-    contractor.keywords.forEach(keyword => {
-      const category = keyword.category as keyof CategorizedKeywords;
-      if (categorized[category]) {
-        categorized[category].push({
-          id: keyword.id,
-          name: keyword.name,
-          category: keyword.category,
-          inserted_at: new Date().toISOString() // Add required field
-        });
-      }
-    });
-
-    return categorized;
   };
 
   const addTask = async (task: Omit<Task, 'id' | 'created_at' | 'created_by'>) => {
@@ -376,6 +362,7 @@ export function useContractorData(contractorId: string) {
       setLoading(true);
       await Promise.all([
         fetchContractor(),
+        fetchKeywords(),
         fetchTasks(),
         fetchHistory(),
         fetchEmployees()
@@ -391,7 +378,7 @@ export function useContractorData(contractorId: string) {
     tasks,
     history,
     employees,
-    keywords: getCategorizedKeywords(),
+    keywords,
     loading,
     updateContractor,
     updateKeywords,
@@ -403,6 +390,7 @@ export function useContractorData(contractorId: string) {
     deleteHistoryEntry,
     refreshData: () => {
       fetchContractor();
+      fetchKeywords();
       fetchTasks();
       fetchHistory();
       fetchEmployees();
