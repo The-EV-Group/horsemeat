@@ -12,9 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Users, Clock, CheckSquare, Edit, Eye, EyeOff, Trash2, User, Calendar as CalendarIcon } from 'lucide-react';
+import { Users, Clock, CheckSquare, Edit, Eye, EyeOff, Trash2, User, Calendar as CalendarIcon, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+
+interface ContractorWithTasks {
+  id: string;
+  full_name: string;
+  openTaskCount: number;
+}
 
 export default function Dashboard() {
   const { employee, user } = useAuth();
@@ -22,6 +28,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const [showContractors, setShowContractors] = useState(false);
+  const [contractors, setContractors] = useState<ContractorWithTasks[]>([]);
+  const [contractorsLoading, setContractorsLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -30,6 +39,65 @@ export default function Dashboard() {
   });
   const [dayFilter, setDayFilter] = useState<string>('all');
   const [taskLoading, setTaskLoading] = useState(false);
+
+  const fetchMyContractors = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setContractorsLoading(true);
+      
+      // Get contractors that belong to the current user
+      const { data: contractorData, error: contractorError } = await supabase
+        .from('contractor')
+        .select('id, full_name')
+        .eq('owner_id', user.id);
+
+      if (contractorError) throw contractorError;
+
+      if (!contractorData || contractorData.length === 0) {
+        setContractors([]);
+        return;
+      }
+
+      // Get open task counts for each contractor
+      const contractorIds = contractorData.map(c => c.id);
+      const { data: taskCounts, error: taskError } = await supabase
+        .from('contractor_task')
+        .select('contractor_id')
+        .in('contractor_id', contractorIds)
+        .in('status', ['in progress', 'overdue']);
+
+      if (taskError) throw taskError;
+
+      // Count tasks per contractor
+      const taskCountMap = (taskCounts || []).reduce((acc, task) => {
+        acc[task.contractor_id] = (acc[task.contractor_id] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Combine contractor data with task counts
+      const contractorsWithTasks: ContractorWithTasks[] = contractorData.map(contractor => ({
+        id: contractor.id,
+        full_name: contractor.full_name || 'Unknown',
+        openTaskCount: taskCountMap[contractor.id] || 0
+      }));
+
+      setContractors(contractorsWithTasks);
+    } catch (error) {
+      console.error('Error fetching contractors:', error);
+    } finally {
+      setContractorsLoading(false);
+    }
+  };
+
+  const handleViewContractors = async () => {
+    await fetchMyContractors();
+    setShowContractors(true);
+  };
+
+  const handleViewContractorProfile = (contractorId: string) => {
+    navigate(`/contractors/search`, { state: { openProfile: contractorId } });
+  };
 
   const handleUpdateTask = async () => {
     if (!editingTask) return;
@@ -255,6 +323,69 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* My Contractors Section */}
+      <Card className="shadow-soft">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                My Contractors
+              </CardTitle>
+              <CardDescription>
+                View all contractors that belong to you and their open task counts
+              </CardDescription>
+            </div>
+            <Button onClick={handleViewContractors} disabled={contractorsLoading}>
+              <Users className="h-4 w-4 mr-2" />
+              {contractorsLoading ? 'Loading...' : 'View My Contractors'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showContractors && (
+          <CardContent>
+            {contractorsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading contractors...</p>
+              </div>
+            ) : contractors.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                You don't have any contractors assigned to you yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {contractors.map((contractor) => (
+                  <div key={contractor.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <h4 className="font-medium">{contractor.full_name}</h4>
+                        <p className="text-sm text-gray-600">
+                          {contractor.openTaskCount} open task{contractor.openTaskCount !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      {contractor.openTaskCount > 0 && (
+                        <Badge variant="outline" className="ml-2">
+                          {contractor.openTaskCount} open
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewContractorProfile(contractor.id)}
+                    >
+                      <User className="h-4 w-4 mr-2" />
+                      View Profile
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
       {/* Active Tasks Section */}
       <Card className="shadow-soft">
