@@ -165,6 +165,54 @@ export function useContractorData(contractorId: string) {
     }
   };
 
+  const updateContractor = async (updates: Partial<ContractorData>) => {
+    try {
+      const { error } = await supabase
+        .from('contractor')
+        .update(updates)
+        .eq('id', contractorId);
+
+      if (error) throw error;
+      await fetchContractor();
+    } catch (error) {
+      console.error('Error updating contractor:', error);
+      throw error;
+    }
+  };
+
+  const updateKeywords = async (newKeywords: Array<{ id: string; name: string; category: string; note?: string }>) => {
+    try {
+      // Delete existing keywords
+      const { error: deleteError } = await supabase
+        .from('contractor_keyword')
+        .delete()
+        .eq('contractor_id', contractorId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new keywords
+      if (newKeywords.length > 0) {
+        const keywordInserts = newKeywords.map((keyword, index) => ({
+          contractor_id: contractorId,
+          keyword_id: keyword.id,
+          note: keyword.note || null,
+          position: index + 1
+        }));
+
+        const { error: insertError } = await supabase
+          .from('contractor_keyword')
+          .insert(keywordInserts);
+
+        if (insertError) throw insertError;
+      }
+
+      await fetchContractor();
+    } catch (error) {
+      console.error('Error updating keywords:', error);
+      throw error;
+    }
+  };
+
   const addTask = async (task: Omit<Task, 'id' | 'created_at' | 'created_by'>) => {
     try {
       const { error } = await supabase
@@ -285,7 +333,10 @@ export function useContractorData(contractorId: string) {
     tasks,
     history,
     employees,
+    keywords: contractor?.keywords || [],
     loading,
+    updateContractor,
+    updateKeywords,
     addTask,
     updateTask,
     deleteTask,
