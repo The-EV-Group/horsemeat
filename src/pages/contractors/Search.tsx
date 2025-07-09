@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Eye, Star, MapPin, DollarSign, List } from 'lucide-react';
+import { Eye, Star, MapPin, DollarSign, List, Users } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export default function SearchContractors() {
-  const { contractors, loading, searchContractors, error } = useContractorSearch();
+  const { contractors, loading, searchContractors, listAllContractors, error } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const location = useLocation();
@@ -32,19 +32,9 @@ export default function SearchContractors() {
     setViewMode('table');
   };
 
-  const handleListAllAvailable = async () => {
-    console.log('Listing all available contractors');
-    const availableFilters: SearchFiltersType = {
-      available: true,
-      state: '',
-      city: '',
-      skills: [],
-      industries: [],
-      companies: [],
-      certifications: [],
-      jobTitles: []
-    };
-    await searchContractors(availableFilters);
+  const handleListAll = () => {
+    console.log('Listing all contractors');
+    listAllContractors();
     setViewMode('list');
   };
 
@@ -86,13 +76,13 @@ export default function SearchContractors() {
 
       <div className="flex gap-4 mb-4">
         <Button
-          onClick={handleListAllAvailable}
+          onClick={handleListAll}
           disabled={loading}
           variant="outline"
           className="flex items-center gap-2"
         >
-          <List className="h-4 w-4" />
-          {loading ? 'Loading...' : 'List All Available'}
+          <Users className="h-4 w-4" />
+          {loading ? 'Loading...' : 'List All Contractors'}
         </Button>
 
         {contractors.length > 0 && (
@@ -115,10 +105,16 @@ export default function SearchContractors() {
         )}
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <p className="text-red-800">Error: {error}</p>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>
-            {viewMode === 'list' ? 'Available Contractors' : 'Search Results'}
+            {viewMode === 'list' ? 'All Contractors' : 'Search Results'}
             {contractors.length > 0 && (
               <span className="text-sm font-normal text-gray-500 ml-2">
                 ({contractors.length} found)
@@ -134,7 +130,7 @@ export default function SearchContractors() {
             </div>
           ) : contractors.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              No contractors found. Try adjusting your search criteria or click "List All Available".
+              No contractors found. Try adjusting your search criteria or click "List All Contractors".
             </p>
           ) : viewMode === 'list' ? (
             <ScrollArea className="h-[600px] w-full">

@@ -31,6 +31,7 @@ export function useContractorSearch() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Starting search with filters:', filters);
 
       let query = supabase
         .from('contractor')
@@ -38,37 +39,42 @@ export function useContractorSearch() {
         .order('inserted_at', { ascending: false });
 
       // Apply text search
-      if (filters.searchTerm) {
+      if (filters.searchTerm && filters.searchTerm.trim()) {
         query = query.or(`full_name.ilike.%${filters.searchTerm}%,email.ilike.%${filters.searchTerm}%,phone.ilike.%${filters.searchTerm}%`);
       }
 
-      // Apply boolean filters
-      if (filters.available !== null) {
+      // Apply boolean filters - only if they are explicitly set (not null/undefined)
+      if (filters.available === true || filters.available === false) {
         query = query.eq('available', filters.available);
       }
 
-      if (filters.starCandidate !== null) {
+      if (filters.starCandidate === true || filters.starCandidate === false) {
         query = query.eq('star_candidate', filters.starCandidate);
       }
 
       // Apply pay type filter
-      if (filters.payType) {
+      if (filters.payType && filters.payType.trim()) {
         query = query.eq('pay_type', filters.payType);
       }
 
       // Apply state filter
-      if (filters.state) {
+      if (filters.state && filters.state.trim()) {
         query = query.eq('state', filters.state);
       }
 
       // Apply city filter
-      if (filters.city) {
+      if (filters.city && filters.city.trim()) {
         query = query.eq('city', filters.city);
       }
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
+
+      console.log('Query returned:', data?.length, 'contractors');
 
       // Calculate match percentage and filter by keywords
       const allKeywords = [
@@ -85,7 +91,10 @@ export function useContractorSearch() {
           .from('contractor_keyword')
           .select('contractor_id, keyword_id');
 
-        if (keywordError) throw keywordError;
+        if (keywordError) {
+          console.error('Error fetching contractor keywords:', keywordError);
+          throw keywordError;
+        }
 
         // Calculate match percentages
         const contractorsWithMatches = data?.map(contractor => {
@@ -107,12 +116,42 @@ export function useContractorSearch() {
 
         // Sort by match percentage (highest first)
         contractorsWithMatches.sort((a, b) => (b.matchPercentage || 0) - (a.matchPercentage || 0));
+        console.log('Contractors with match percentages:', contractorsWithMatches.length);
 
         setContractors(contractorsWithMatches);
       } else {
+        console.log('No keywords selected, returning all matching contractors');
         setContractors(data || []);
       }
     } catch (err) {
+      console.error('Search error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setContractors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const listAllContractors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Listing all contractors');
+
+      const { data, error } = await supabase
+        .from('contractor')
+        .select('*')
+        .order('full_name');
+
+      if (error) {
+        console.error('Error fetching all contractors:', error);
+        throw error;
+      }
+
+      console.log('All contractors fetched:', data?.length);
+      setContractors(data || []);
+    } catch (err) {
+      console.error('Error listing all contractors:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setContractors([]);
     } finally {
@@ -185,6 +224,7 @@ export function useContractorSearch() {
     loading,
     error,
     searchContractors,
+    listAllContractors,
     searchByName,
     deleteContractor
   };
