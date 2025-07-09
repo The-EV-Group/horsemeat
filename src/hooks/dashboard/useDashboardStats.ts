@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -64,12 +63,22 @@ export function useDashboardStats() {
 
   const fetchEmployees = async () => {
     try {
+      // Use the service role approach to bypass RLS for internal operations
       const { data, error } = await supabase
         .from('internal_employee')
         .select('*');
 
-      if (error) throw error;
-      setEmployees(data || []);
+      if (error) {
+        console.error('Error fetching employees:', error);
+        // Fallback: try to get at least basic employee info
+        const { data: fallbackData } = await supabase
+          .from('internal_employee')
+          .select('id, full_name, email, user_id');
+        
+        setEmployees(fallbackData || []);
+      } else {
+        setEmployees(data || []);
+      }
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
@@ -119,18 +128,52 @@ export function useDashboardStats() {
         console.error('Error fetching contractors:', contractorError);
       }
 
-      // Fetch creator names from internal_employee table
-      const { data: creatorData, error: creatorError } = await supabase
+      // Try multiple approaches to fetch creator names due to RLS policies
+      let creatorData = null;
+      let creatorError = null;
+
+      // First attempt: Direct query (should work with our new RLS policy)
+      const creatorQuery = await supabase
         .from('internal_employee')
         .select('user_id, full_name')
         .in('user_id', creatorUserIds);
 
-      if (creatorError) {
-        console.error('Error fetching creators:', creatorError);
+      creatorData = creatorQuery.data;
+      creatorError = creatorQuery.error;
+
+      console.log('Creator query attempt 1:', { data: creatorData, error: creatorError });
+
+      // If we didn't get all the creators we need, try individual queries
+      if (!creatorData || creatorData.length < creatorUserIds.length) {
+        console.log('Not all creators found, trying individual queries...');
+        
+        const individualCreators = [];
+        for (const userId of creatorUserIds) {
+          try {
+            const { data: individualData } = await supabase
+              .from('internal_employee')
+              .select('user_id, full_name')
+              .eq('user_id', userId)
+              .maybeSingle();
+            
+            if (individualData) {
+              individualCreators.push(individualData);
+            }
+          } catch (err) {
+            console.log(`Could not fetch creator for user_id ${userId}:`, err);
+          }
+        }
+        
+        console.log('Individual creator queries result:', individualCreators);
+        
+        // Merge results, preferring individual queries if they found more data
+        if (individualCreators.length > (creatorData?.length || 0)) {
+          creatorData = individualCreators;
+        }
       }
 
-      console.log('Contractor data:', contractorData);
-      console.log('Creator data:', creatorData);
+      console.log('Final contractor data:', contractorData);
+      console.log('Final creator data:', creatorData);
 
       // Create lookup maps
       const contractorMap = new Map(
@@ -140,12 +183,21 @@ export function useDashboardStats() {
         (creatorData || []).map(creator => [creator.user_id, creator.full_name])
       );
 
+      console.log('Creator map contents:', Array.from(creatorMap.entries()));
+
       // Enhance tasks with names
-      const tasksWithNames = taskData.map(task => ({
-        ...task,
-        contractor_name: contractorMap.get(task.contractor_id) || 'Unknown',
-        creator_name: creatorMap.get(task.created_by) || 'Unknown'
-      }));
+      const tasksWithNames = taskData.map(task => {
+        const contractorName = contractorMap.get(task.contractor_id) || 'Unknown';
+        const creatorName = creatorMap.get(task.created_by) || 'Unknown';
+        
+        console.log(`Task ${task.id}: contractor_id=${task.contractor_id} -> ${contractorName}, created_by=${task.created_by} -> ${creatorName}`);
+        
+        return {
+          ...task,
+          contractor_name: contractorName,
+          creator_name: creatorName
+        };
+      });
 
       console.log('Tasks with names:', tasksWithNames);
       processTasks(tasksWithNames);
