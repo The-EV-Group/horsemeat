@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -18,6 +19,14 @@ interface Task {
   created_at: string;
   contractor_id: string;
   contractor_name?: string;
+  creator_name?: string;
+}
+
+interface InternalEmployee {
+  id: string;
+  full_name: string;
+  email: string;
+  user_id: string;
 }
 
 export function useDashboardStats() {
@@ -27,6 +36,8 @@ export function useDashboardStats() {
     activeContractors: 0
   });
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
+  const [employees, setEmployees] = useState<InternalEmployee[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
@@ -51,25 +62,57 @@ export function useDashboardStats() {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('internal_employee')
+        .select('*');
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
   const fetchTasks = async () => {
     try {
       const { data, error } = await supabase
         .from('contractor_task')
         .select(`
           *,
-          contractor(full_name)
+          contractor(full_name),
+          internal_employee!fk_created_by_employee(full_name)
         `)
         .or(`is_public.eq.true,created_by.eq.${user?.id}`)
         .order('due_date', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
 
-      const tasksWithContractorNames = data.map(task => ({
+      const tasksWithNames = (data || []).map(task => ({
         ...task,
-        contractor_name: task.contractor?.full_name || 'Unknown'
+        contractor_name: task.contractor?.full_name || 'Unknown',
+        creator_name: task.internal_employee?.full_name || 'Unknown'
       }));
 
-      setTasks(tasksWithContractorNames);
+      // Update overdue tasks automatically
+      const tasksToUpdate = tasksWithNames.filter(task => {
+        if (!task.due_date || task.status === 'completed') return false;
+        const daysUntil = getDaysUntilDue(task.due_date);
+        return daysUntil !== null && daysUntil < 0 && task.status !== 'overdue';
+      });
+
+      // Update overdue tasks in the database
+      for (const task of tasksToUpdate) {
+        await updateTask(task.id, { status: 'overdue' });
+      }
+
+      // Separate completed and non-completed tasks
+      const activeTasks = tasksWithNames.filter(task => task.status !== 'completed');
+      const completedTasksList = tasksWithNames.filter(task => task.status === 'completed');
+
+      setTasks(activeTasks);
+      setCompletedTasks(completedTasksList);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
@@ -117,7 +160,7 @@ export function useDashboardStats() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      await Promise.all([fetchStats(), fetchTasks()]);
+      await Promise.all([fetchStats(), fetchTasks(), fetchEmployees()]);
       setLoading(false);
     };
 
@@ -129,6 +172,8 @@ export function useDashboardStats() {
   return {
     stats,
     tasks,
+    completedTasks,
+    employees,
     loading,
     updateTask,
     deleteTask,
@@ -136,6 +181,7 @@ export function useDashboardStats() {
     refreshData: () => {
       fetchStats();
       fetchTasks();
+      fetchEmployees();
     }
   };
 }

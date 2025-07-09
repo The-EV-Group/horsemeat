@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const { employee, user } = useAuth();
-  const { stats, tasks, loading, updateTask, deleteTask, getDaysUntilDue } = useDashboardStats();
+  const { stats, tasks, completedTasks, employees, loading, updateTask, deleteTask, getDaysUntilDue } = useDashboardStats();
   const navigate = useNavigate();
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
@@ -144,6 +144,87 @@ export default function Dashboard() {
     },
   ];
 
+  const renderTaskCard = (task: any) => {
+    const daysUntil = getDaysUntilDue(task.due_date);
+    const isOwner = task.created_by === user?.id;
+    
+    return (
+      <div key={task.id} className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h4 className="font-medium">{task.title}</h4>
+            <Badge className={getStatusColor(task.status)}>
+              {task.status}
+            </Badge>
+            {!task.is_public && (
+              <Badge variant="outline">Private</Badge>
+            )}
+            {task.due_date && task.status !== 'completed' && (
+              <Badge variant="outline">
+                {daysUntil !== null && daysUntil > 0 
+                  ? `${daysUntil} days left`
+                  : daysUntil === 0 
+                  ? 'Due today'
+                  : `${Math.abs(daysUntil!)} days overdue`
+                }
+              </Badge>
+            )}
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openEditDialog(task)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTaskToDelete(task)}
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openContractorProfile(task.contractor_id)}
+              className="h-8 w-8 p-0"
+              title="Open Contractor Profile"
+            >
+              <User className="h-4 w-4" />
+            </Button>
+            {isOwner && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleToggleVisibility(task)}
+                className="h-8 w-8 p-0"
+              >
+                {task.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {task.description && (
+          <p className="text-sm text-gray-600">{task.description}</p>
+        )}
+        
+        <div className="flex items-center gap-4 text-xs text-gray-500">
+          <span>For: {task.contractor_name}</span>
+          <span>By: {task.creator_name}</span>
+          <span>Created: {format(new Date(task.created_at), 'MMM d, yyyy')}</span>
+          {task.due_date && (
+            <span>Due: {format(new Date(task.due_date), 'MMM d, yyyy')}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
@@ -175,17 +256,17 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Tasks Section */}
+      {/* Active Tasks Section */}
       <Card className="shadow-soft">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <CheckSquare className="h-5 w-5" />
-                Task Management
+                Active Task Management
               </CardTitle>
               <CardDescription>
-                Track and manage contractor tasks across all your projects
+                Track and manage active contractor tasks across all your projects
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -215,89 +296,40 @@ export default function Dashboard() {
             </div>
           ) : filteredTasks.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              No tasks found. Create tasks in contractor profiles to see them here.
+              No active tasks found. Create tasks in contractor profiles to see them here.
             </p>
           ) : (
             <div className="space-y-4">
-              {filteredTasks.map((task) => {
-                const daysUntil = getDaysUntilDue(task.due_date);
-                const isOwner = task.created_by === user?.id;
-                
-                return (
-                  <div key={task.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <h4 className="font-medium">{task.title}</h4>
-                        <Badge className={getStatusColor(task.status)}>
-                          {task.status}
-                        </Badge>
-                        {!task.is_public && (
-                          <Badge variant="outline">Private</Badge>
-                        )}
-                        {task.due_date && (
-                          <Badge variant="outline">
-                            {daysUntil !== null && daysUntil > 0 
-                              ? `${daysUntil} days left`
-                              : daysUntil === 0 
-                              ? 'Due today'
-                              : `${Math.abs(daysUntil!)} days overdue`
-                            }
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(task)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setTaskToDelete(task)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openContractorProfile(task.contractor_id)}
-                          className="h-8 w-8 p-0"
-                          title="Open Contractor Profile"
-                        >
-                          <User className="h-4 w-4" />
-                        </Button>
-                        {isOwner && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleVisibility(task)}
-                            className="h-8 w-8 p-0"
-                          >
-                            {task.is_public ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {task.description && (
-                      <p className="text-sm text-gray-600">{task.description}</p>
-                    )}
-                    
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span>For: {task.contractor_name}</span>
-                      <span>Created: {format(new Date(task.created_at), 'MMM d, yyyy')}</span>
-                      {task.due_date && (
-                        <span>Due: {format(new Date(task.due_date), 'MMM d, yyyy')}</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {filteredTasks.map(renderTaskCard)}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Completed Tasks Section */}
+      <Card className="shadow-soft">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 text-green-600" />
+            Completed Tasks
+          </CardTitle>
+          <CardDescription>
+            View all completed contractor tasks
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading completed tasks...</p>
+            </div>
+          ) : completedTasks.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">
+              No completed tasks yet.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {completedTasks.map(renderTaskCard)}
             </div>
           )}
         </CardContent>
