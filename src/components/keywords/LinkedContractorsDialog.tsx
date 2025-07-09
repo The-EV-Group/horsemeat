@@ -11,7 +11,12 @@ import type { Tables } from '@/integrations/supabase/types';
 type Keyword = Tables<'keyword'>;
 type Contractor = Tables<'contractor'>;
 
-interface LinkedContractor extends Contractor {
+interface LinkedContractor {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  city: string | null;
+  state: string | null;
   link_id: string;
 }
 
@@ -56,7 +61,11 @@ export function LinkedContractorsDialog({
       if (error) throw error;
 
       const contractors = data?.map(item => ({
-        ...item.contractor,
+        id: item.contractor.id,
+        full_name: item.contractor.full_name,
+        email: item.contractor.email,
+        city: item.contractor.city,
+        state: item.contractor.state,
         link_id: `${item.contractor_id}-${keyword.id}`
       })) || [];
 
