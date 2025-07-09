@@ -109,7 +109,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             label="Skills"
             category="skills"
             value={filters.skills}
-            onChange={(keywords) => updateKeywords('skills', keywords)}
+            onChange={(keywords) => updateKeywords('skills', keywords as Keyword[])}
             helperText="Search and select skills"
           />
 
@@ -117,7 +117,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             label="Industries"
             category="industries"
             value={filters.industries}
-            onChange={(keywords) => updateKeywords('industries', keywords)}
+            onChange={(keywords) => updateKeywords('industries', keywords as Keyword[])}
             helperText="Search and select industries"
           />
 
@@ -125,7 +125,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             label="Companies"
             category="companies"
             value={filters.companies}
-            onChange={(keywords) => updateKeywords('companies', keywords)}
+            onChange={(keywords) => updateKeywords('companies', keywords as Keyword[])}
             helperText="Search and select companies"
           />
 
@@ -133,7 +133,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             label="Certifications"
             category="certifications"
             value={filters.certifications}
-            onChange={(keywords) => updateKeywords('certifications', keywords)}
+            onChange={(keywords) => updateKeywords('certifications', keywords as Keyword[])}
             helperText="Search and select certifications"
           />
 
@@ -141,7 +141,7 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
             label="Job Titles"
             category="job titles"
             value={filters.jobTitles}
-            onChange={(keywords) => updateKeywords('jobTitles', keywords)}
+            onChange={(keywords) => updateKeywords('jobTitles', keywords as Keyword[])}
             helperText="Search and select job titles"
           />
         </div>
