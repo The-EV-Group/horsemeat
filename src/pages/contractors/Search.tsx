@@ -13,7 +13,7 @@ import { useLocation } from 'react-router-dom';
 export default function SearchContractors() {
   const { contractors, loading, searchContractors, error } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
-  const [lastSearchFilters, setLastSearchFilters] = useState<SearchFiltersType | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
   const location = useLocation();
 
   // Check if we should open a specific contractor profile on load
@@ -25,23 +25,24 @@ export default function SearchContractors() {
     }
   }, [location.state]);
 
-  // Load all contractors on initial page load
+  // Load all contractors on initial page load - only once
   useEffect(() => {
-    const initialFilters: SearchFiltersType = {
-      state: '',
-      city: '',
-      skills: [],
-      industries: [],
-      companies: [],
-      certifications: [],
-      jobTitles: []
-    };
-    searchContractors(initialFilters);
-    setLastSearchFilters(initialFilters);
-  }, [searchContractors]);
+    if (!hasSearched) {
+      const initialFilters: SearchFiltersType = {
+        state: '',
+        city: '',
+        skills: [],
+        industries: [],
+        companies: [],
+        certifications: [],
+        jobTitles: []
+      };
+      searchContractors(initialFilters);
+      setHasSearched(true);
+    }
+  }, [searchContractors, hasSearched]);
 
   const handleSearch = (filters: SearchFiltersType) => {
-    setLastSearchFilters(filters);
     searchContractors(filters);
   };
 
@@ -51,10 +52,6 @@ export default function SearchContractors() {
 
   const handleCloseProfile = () => {
     setSelectedContractorId(null);
-    // Refresh the search results if we had previous search filters
-    if (lastSearchFilters) {
-      searchContractors(lastSearchFilters);
-    }
   };
 
   if (selectedContractorId) {
@@ -131,7 +128,9 @@ export default function SearchContractors() {
                           <DollarSign className="h-4 w-4 text-gray-400" />
                           <span>
                             {contractor.prefers_hourly 
-                              ? `$${contractor.hourly_rate}/hr`
+                              ? contractor.pay_rate_upper 
+                                ? `$${contractor.hourly_rate}-$${contractor.pay_rate_upper}/hr`
+                                : `$${contractor.hourly_rate}/hr`
                               : `$${contractor.salary_lower}-$${contractor.salary_higher}`
                             }
                           </span>

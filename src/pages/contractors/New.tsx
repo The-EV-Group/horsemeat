@@ -149,7 +149,7 @@ export default function NewContractor() {
         salary_higher: !data.prefers_hourly ? data.salary_higher : null,
         // Map to new pay rate fields
         pay_rate_upper: data.prefers_hourly 
-          ? data.hourly_rate?.toString() 
+          ? data.hourly_rate_upper?.toString() 
           : data.salary_higher?.toString(),
         available: data.available,
         star_candidate: data.star_candidate,

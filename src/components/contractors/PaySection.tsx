@@ -42,14 +42,22 @@ export function PaySection({ register, errors, watchedValues, setValue }: PaySec
         </div>
         
         {watchedValues.prefers_hourly ? (
-          <div className="max-w-xs">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
-              label="Hourly Rate"
+              label="Minimum Hourly Rate"
               type="number"
               step="0.01"
               {...register('hourly_rate')}
               error={errors.hourly_rate?.message}
               required
+              placeholder="25.00"
+            />
+            <FormInput
+              label="Maximum Hourly Rate"
+              type="number"
+              step="0.01"
+              {...register('hourly_rate_upper')}
+              error={errors.hourly_rate_upper?.message}
               placeholder="65.00"
             />
           </div>

@@ -5,7 +5,7 @@ export const contractorSchema = z.object({
   // Basic info - these should be required and not allow empty strings
   full_name: z.string().min(1, 'Full name is required').trim(),
   email: z.string().min(1, 'Email is required').email('Invalid email format'),
-  phone: z.string().min(1, 'Phone is required').regex(/^\+?[\d\s\(\)\-]{10,15}$/, 'Phone must be 10-15 digits'),
+  phone: z.string().min(10, 'Phone must be 10 digits').max(10, 'Phone must be 10 digits').regex(/^\d{10}$/, 'Phone must be exactly 10 digits'),
   
   // Location
   city: z.string().optional(),
@@ -26,6 +26,11 @@ export const contractorSchema = z.object({
   pay_type: z.enum(['W2', '1099']),
   prefers_hourly: z.boolean(),
   hourly_rate: z.string().optional().transform((val) => {
+    if (!val || val === '') return undefined;
+    const num = parseFloat(val);
+    return isNaN(num) ? undefined : num;
+  }),
+  hourly_rate_upper: z.string().optional().transform((val) => {
     if (!val || val === '') return undefined;
     const num = parseFloat(val);
     return isNaN(num) ? undefined : num;
@@ -63,8 +68,15 @@ export const contractorSchema = z.object({
     if (data.hourly_rate === undefined || data.hourly_rate < 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Hourly rate is required and must be 0 or greater',
+        message: 'Minimum hourly rate is required and must be 0 or greater',
         path: ['hourly_rate'],
+      });
+    }
+    if (data.hourly_rate_upper !== undefined && data.hourly_rate !== undefined && data.hourly_rate_upper < data.hourly_rate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Maximum hourly rate must be greater than or equal to minimum hourly rate',
+        path: ['hourly_rate_upper'],
       });
     }
   } else {

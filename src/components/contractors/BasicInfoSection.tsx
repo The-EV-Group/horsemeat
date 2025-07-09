@@ -17,6 +17,13 @@ interface BasicInfoSectionProps {
 }
 
 export function BasicInfoSection({ register, errors, watchedValues, setValue }: BasicInfoSectionProps) {
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length <= 10) {
+      setValue('phone', value);
+    }
+  };
+
   return (
     <Card className="shadow-soft">
       <CardHeader>
@@ -42,12 +49,14 @@ export function BasicInfoSection({ register, errors, watchedValues, setValue }: 
         />
         
         <FormInput
-          label="Phone"
+          label="Phone (10 digits)"
           type="tel"
-          {...register('phone')}
+          value={watchedValues.phone || ''}
+          onChange={handlePhoneChange}
           error={errors.phone?.message}
           required
-          placeholder="(555) 123-4567"
+          placeholder="5551234567"
+          maxLength={10}
         />
         
         <div>
