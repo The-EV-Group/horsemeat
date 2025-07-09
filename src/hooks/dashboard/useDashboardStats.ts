@@ -185,15 +185,18 @@ export function useDashboardStats() {
 
       console.log('Creator map contents:', Array.from(creatorMap.entries()));
 
-      // Enhance tasks with names
-      const tasksWithNames = taskData.map(task => {
-        const contractorName = contractorMap.get(task.contractor_id) || 'Unknown';
-        const creatorName = creatorMap.get(task.created_by) || 'Unknown';
+      // Enhance tasks with names - ensure proper string typing
+      const tasksWithNames: Task[] = taskData.map(task => {
+        const contractorName = contractorMap.get(task.contractor_id || '') || 'Unknown';
+        const creatorName = creatorMap.get(task.created_by || '') || 'Unknown';
         
         console.log(`Task ${task.id}: contractor_id=${task.contractor_id} -> ${contractorName}, created_by=${task.created_by} -> ${creatorName}`);
         
         return {
           ...task,
+          contractor_id: task.contractor_id || '',
+          created_by: task.created_by || '',
+          created_at: task.created_at || '',
           contractor_name: contractorName,
           creator_name: creatorName
         };
