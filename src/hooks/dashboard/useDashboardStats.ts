@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -128,48 +129,16 @@ export function useDashboardStats() {
         console.error('Error fetching contractors:', contractorError);
       }
 
-      // Try multiple approaches to fetch creator names due to RLS policies
-      let creatorData = null;
-      let creatorError = null;
-
-      // First attempt: Direct query (should work with our new RLS policy)
-      const creatorQuery = await supabase
+      // Fetch creator names - this should now work with the updated RLS policy
+      const { data: creatorData, error: creatorError } = await supabase
         .from('internal_employee')
         .select('user_id, full_name')
         .in('user_id', creatorUserIds);
 
-      creatorData = creatorQuery.data;
-      creatorError = creatorQuery.error;
+      console.log('Creator query result:', { data: creatorData, error: creatorError });
 
-      console.log('Creator query attempt 1:', { data: creatorData, error: creatorError });
-
-      // If we didn't get all the creators we need, try individual queries
-      if (!creatorData || creatorData.length < creatorUserIds.length) {
-        console.log('Not all creators found, trying individual queries...');
-        
-        const individualCreators = [];
-        for (const userId of creatorUserIds) {
-          try {
-            const { data: individualData } = await supabase
-              .from('internal_employee')
-              .select('user_id, full_name')
-              .eq('user_id', userId)
-              .maybeSingle();
-            
-            if (individualData) {
-              individualCreators.push(individualData);
-            }
-          } catch (err) {
-            console.log(`Could not fetch creator for user_id ${userId}:`, err);
-          }
-        }
-        
-        console.log('Individual creator queries result:', individualCreators);
-        
-        // Merge results, preferring individual queries if they found more data
-        if (individualCreators.length > (creatorData?.length || 0)) {
-          creatorData = individualCreators;
-        }
+      if (creatorError) {
+        console.error('Error fetching creators:', creatorError);
       }
 
       console.log('Final contractor data:', contractorData);
@@ -185,7 +154,7 @@ export function useDashboardStats() {
 
       console.log('Creator map contents:', Array.from(creatorMap.entries()));
 
-      // Enhance tasks with names - ensure proper string typing
+      // Enhance tasks with names - fix type casting
       const tasksWithNames: Task[] = taskData.map(task => {
         const contractorName = contractorMap.get(task.contractor_id || '') || 'Unknown';
         const creatorName = creatorMap.get(task.created_by || '') || 'Unknown';
@@ -193,13 +162,18 @@ export function useDashboardStats() {
         console.log(`Task ${task.id}: contractor_id=${task.contractor_id} -> ${contractorName}, created_by=${task.created_by} -> ${creatorName}`);
         
         return {
-          ...task,
-          contractor_id: task.contractor_id || '',
+          id: task.id,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          due_date: task.due_date,
+          is_public: task.is_public || false,
           created_by: task.created_by || '',
           created_at: task.created_at || '',
+          contractor_id: task.contractor_id || '',
           contractor_name: contractorName,
           creator_name: creatorName
-        };
+        } as Task;
       });
 
       console.log('Tasks with names:', tasksWithNames);
