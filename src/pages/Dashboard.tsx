@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useDashboardStats } from '@/hooks/dashboard/useDashboardStats';
@@ -39,6 +40,11 @@ export default function Dashboard() {
   });
   const [dayFilter, setDayFilter] = useState<string>('all');
   const [taskLoading, setTaskLoading] = useState(false);
+
+  // Check if current user can edit/delete a task
+  const canEditTask = (task: any) => {
+    return task.created_by === user?.id;
+  };
 
   const fetchMyContractors = async () => {
     if (!employee?.id) {
@@ -158,7 +164,7 @@ export default function Dashboard() {
   };
 
   const handleToggleVisibility = async (task: any) => {
-    if (task.created_by !== user?.id) return;
+    if (!canEditTask(task)) return;
     
     try {
       await updateTask(task.id, { is_public: !task.is_public });
@@ -228,7 +234,7 @@ export default function Dashboard() {
 
   const renderTaskCard = (task: any) => {
     const daysUntil = getDaysUntilDue(task.due_date);
-    const isOwner = task.created_by === user?.id;
+    const isOwner = canEditTask(task);
     
     return (
       <div key={task.id} className="border rounded-lg p-4 space-y-3">
@@ -253,22 +259,26 @@ export default function Dashboard() {
             )}
           </div>
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => openEditDialog(task)}
-              className="h-8 w-8 p-0"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setTaskToDelete(task)}
-              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {isOwner && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openEditDialog(task)}
+                  className="h-8 w-8 p-0"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTaskToDelete(task)}
+                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
             <Button
               variant="ghost"
               size="sm"

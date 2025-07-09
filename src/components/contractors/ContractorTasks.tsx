@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -154,6 +155,11 @@ export function ContractorTasks({
     return diffDays;
   };
 
+  // Check if current user can edit/delete a task
+  const canEditTask = (task: Task) => {
+    return task.created_by === user?.id;
+  };
+
   // Filter tasks based on visibility
   const visibleTasks = tasks.filter(task => 
     task.is_public || task.created_by === user?.id
@@ -192,7 +198,7 @@ export function ContractorTasks({
                       <Badge variant="outline">Private</Badge>
                     )}
                   </div>
-                  {task.created_by === user?.id && (
+                  {canEditTask(task) && (
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
