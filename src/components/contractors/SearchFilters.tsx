@@ -95,14 +95,14 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
           <div className="space-y-2">
             <Label htmlFor="state">State</Label>
             <Select 
-              value={filters.state} 
-              onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}
+              value={filters.state || 'all-states'} 
+              onValueChange={(value) => setFilters(prev => ({ ...prev, state: value === 'all-states' ? '' : value }))}
             >
               <SelectTrigger id="state">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All States</SelectItem>
+                <SelectItem value="all-states">All States</SelectItem>
                 {US_STATES.map((state) => (
                   <SelectItem key={state} value={state}>
                     {state}
@@ -173,14 +173,14 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
         <div className="space-y-2">
           <Label htmlFor="pay-type">Pay Type</Label>
           <Select 
-            value={filters.payType || ''} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, payType: value || null }))}
+            value={filters.payType || 'all-types'} 
+            onValueChange={(value) => setFilters(prev => ({ ...prev, payType: value === 'all-types' ? null : value }))}
           >
             <SelectTrigger id="pay-type">
               <SelectValue placeholder="Select pay type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all-types">All Types</SelectItem>
               <SelectItem value="W2">W2</SelectItem>
               <SelectItem value="1099">1099</SelectItem>
             </SelectContent>
