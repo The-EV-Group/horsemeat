@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -59,6 +58,21 @@ interface InternalEmployee {
   email: string;
   user_id: string;
 }
+
+type Keyword = {
+  id: string;
+  name: string;
+  category: string;
+  inserted_at: string;
+};
+
+type CategorizedKeywords = {
+  skills: Keyword[];
+  industries: Keyword[];
+  certifications: Keyword[];
+  companies: Keyword[];
+  'job titles': Keyword[];
+};
 
 export function useContractorData(contractorId: string) {
   const { user } = useAuth();
@@ -180,8 +194,17 @@ export function useContractorData(contractorId: string) {
     }
   };
 
-  const updateKeywords = async (newKeywords: Array<{ id: string; name: string; category: string; note?: string }>) => {
+  const updateKeywords = async (categorizedKeywords: CategorizedKeywords) => {
     try {
+      // Convert categorized keywords back to flat array
+      const allKeywords = Object.entries(categorizedKeywords).flatMap(([category, keywords]) =>
+        keywords.map(keyword => ({
+          id: keyword.id,
+          name: keyword.name,
+          category: keyword.category
+        }))
+      );
+
       // Delete existing keywords
       const { error: deleteError } = await supabase
         .from('contractor_keyword')
@@ -191,11 +214,11 @@ export function useContractorData(contractorId: string) {
       if (deleteError) throw deleteError;
 
       // Insert new keywords
-      if (newKeywords.length > 0) {
-        const keywordInserts = newKeywords.map((keyword, index) => ({
+      if (allKeywords.length > 0) {
+        const keywordInserts = allKeywords.map((keyword, index) => ({
           contractor_id: contractorId,
           keyword_id: keyword.id,
-          note: keyword.note || null,
+          note: null,
           position: index + 1
         }));
 
@@ -211,6 +234,41 @@ export function useContractorData(contractorId: string) {
       console.error('Error updating keywords:', error);
       throw error;
     }
+  };
+
+  // Transform flat keywords array to categorized structure
+  const getCategorizedKeywords = (): CategorizedKeywords => {
+    if (!contractor?.keywords) {
+      return {
+        skills: [],
+        industries: [],
+        certifications: [],
+        companies: [],
+        'job titles': []
+      };
+    }
+
+    const categorized: CategorizedKeywords = {
+      skills: [],
+      industries: [],
+      certifications: [],
+      companies: [],
+      'job titles': []
+    };
+
+    contractor.keywords.forEach(keyword => {
+      const category = keyword.category as keyof CategorizedKeywords;
+      if (categorized[category]) {
+        categorized[category].push({
+          id: keyword.id,
+          name: keyword.name,
+          category: keyword.category,
+          inserted_at: new Date().toISOString() // Add required field
+        });
+      }
+    });
+
+    return categorized;
   };
 
   const addTask = async (task: Omit<Task, 'id' | 'created_at' | 'created_by'>) => {
@@ -333,7 +391,7 @@ export function useContractorData(contractorId: string) {
     tasks,
     history,
     employees,
-    keywords: contractor?.keywords || [],
+    keywords: getCategorizedKeywords(),
     loading,
     updateContractor,
     updateKeywords,
