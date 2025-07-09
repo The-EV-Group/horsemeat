@@ -13,7 +13,7 @@ import { useLocation } from 'react-router-dom';
 export default function SearchContractors() {
   const { contractors, loading, searchContractors, error } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const location = useLocation();
 
   // Check if we should open a specific contractor profile on load
@@ -27,7 +27,7 @@ export default function SearchContractors() {
 
   // Load all contractors on initial page load - only once
   useEffect(() => {
-    if (!hasSearched) {
+    if (!initialLoadComplete) {
       const initialFilters: SearchFiltersType = {
         state: '',
         city: '',
@@ -38,9 +38,9 @@ export default function SearchContractors() {
         jobTitles: []
       };
       searchContractors(initialFilters);
-      setHasSearched(true);
+      setInitialLoadComplete(true);
     }
-  }, [searchContractors, hasSearched]);
+  }, [searchContractors, initialLoadComplete]);
 
   const handleSearch = (filters: SearchFiltersType) => {
     searchContractors(filters);

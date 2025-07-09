@@ -23,18 +23,10 @@ export function InternalEmployeeSection({ selectedEmployee, onEmployeeChange }: 
 
   const fetchEmployees = async () => {
     try {
-      // Only fetch current user's employee record if they exist in internal_employee table
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setEmployees([]);
-        setLoading(false);
-        return;
-      }
-
+      // Fetch all internal employees
       const { data, error } = await supabase
         .from('internal_employee')
         .select('*')
-        .eq('user_id', user.id)
         .order('full_name');
 
       if (error) throw error;

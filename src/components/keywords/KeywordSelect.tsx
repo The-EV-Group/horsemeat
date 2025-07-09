@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,53 +28,44 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
   
   const { searchKeywords, createKeyword } = useKeywords();
 
-  // Local state for new keywords being created
-  const [localKeywords, setLocalKeywords] = useState<Keyword[]>([]);
-
-  // Combine actual keywords with local ones
-  const allSelectedKeywords = useMemo(() => {
-    return [...value, ...localKeywords];
-  }, [value, localKeywords]);
-
+  // Debounce search
   useEffect(() => {
-    const performSearch = async () => {
-      if (searchTerm.trim()) {
-        setIsSearching(true);
-        try {
-          const results = await searchKeywords(searchTerm, category);
-          setSearchResults(results);
-        } catch (error) {
-          console.error('Error searching keywords:', error);
-          setSearchResults([]);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    };
+    if (!searchTerm.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
-    const debounceTimer = setTimeout(performSearch, 300);
-    return () => clearTimeout(debounceTimer);
+    setIsSearching(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const results = await searchKeywords(searchTerm, category);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Error searching keywords:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   }, [searchTerm, category, searchKeywords]);
 
+  const availableKeywords = useMemo(() => {
+    return searchResults.filter(keyword => 
+      !value.some(selected => selected.id === keyword.id)
+    );
+  }, [searchResults, value]);
+
   const handleSelect = (keyword: Keyword) => {
-    const isSelected = allSelectedKeywords.some(k => k.id === keyword.id);
+    const isSelected = value.some(k => k.id === keyword.id);
     
     if (isSelected) {
-      // Remove keyword
-      const newSelected = value.filter(k => k.id !== keyword.id);
-      const newLocal = localKeywords.filter(k => k.id !== keyword.id);
-      onChange(newSelected);
-      setLocalKeywords(newLocal);
+      onChange(value.filter(k => k.id !== keyword.id));
     } else {
-      // Add keyword
-      if (keyword.id.startsWith('local-')) {
-        setLocalKeywords(prev => [...prev, keyword]);
-      } else {
-        onChange([...value, keyword]);
-      }
+      onChange([...value, keyword]);
     }
+    setSearchTerm('');
   };
 
   const handleCreateNew = async () => {
@@ -84,7 +76,7 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
     const existsInResults = searchResults.some(k => 
       k.name.toLowerCase() === trimmedTerm.toLowerCase()
     );
-    const existsInSelected = allSelectedKeywords.some(k => 
+    const existsInSelected = value.some(k => 
       k.name.toLowerCase() === trimmedTerm.toLowerCase()
     );
 
@@ -92,54 +84,37 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
       return;
     }
 
-    // Create a temporary local keyword
-    const localKeyword: Keyword = {
-      id: `local-${Date.now()}-${Math.random()}`,
-      name: trimmedTerm,
-      category: category,
-      inserted_at: new Date().toISOString()
-    };
-
-    setLocalKeywords(prev => [...prev, localKeyword]);
-    setSearchTerm('');
-  };
-
-  const handleRemove = (keywordToRemove: Keyword) => {
-    if (keywordToRemove.id.startsWith('local-')) {
-      setLocalKeywords(prev => prev.filter(k => k.id !== keywordToRemove.id));
-    } else {
-      onChange(value.filter(k => k.id !== keywordToRemove.id));
+    try {
+      const newKeyword = await createKeyword(trimmedTerm, category);
+      onChange([...value, newKeyword]);
+      setSearchTerm('');
+    } catch (error) {
+      console.error('Error creating keyword:', error);
     }
   };
 
-  const availableKeywords = useMemo(() => {
-    return searchResults.filter(keyword => 
-      !allSelectedKeywords.some(selected => selected.id === keyword.id)
-    );
-  }, [searchResults, allSelectedKeywords]);
+  const handleRemove = (keywordToRemove: Keyword) => {
+    onChange(value.filter(k => k.id !== keywordToRemove.id));
+  };
 
   const canCreateNew = searchTerm.trim() && 
     !searchResults.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase()) &&
-    !allSelectedKeywords.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase());
+    !value.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase());
 
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-gray-700">{label}</Label>
       
       {/* Selected keywords */}
-      {allSelectedKeywords.length > 0 && (
+      {value.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2">
-          {allSelectedKeywords.map((keyword) => (
+          {value.map((keyword) => (
             <Badge 
               key={keyword.id} 
               variant="secondary" 
-              className={cn(
-                "flex items-center gap-1",
-                keyword.id.startsWith('local-') && "bg-blue-100 text-blue-800 border-blue-300"
-              )}
+              className="flex items-center gap-1"
             >
               {keyword.name}
-              {keyword.id.startsWith('local-') && <span className="text-xs">(new)</span>}
               <X 
                 className="h-3 w-3 cursor-pointer hover:text-destructive" 
                 onClick={() => handleRemove(keyword)}
@@ -163,7 +138,7 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0" align="start">
-          <Command>
+          <Command shouldFilter={false}>
             <CommandInput 
               placeholder={`Search ${category}...`}
               value={searchTerm}
@@ -184,17 +159,11 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
                         <CommandItem
                           key={keyword.id}
                           value={keyword.name}
-                          onSelect={() => {
-                            handleSelect(keyword);
-                            setSearchTerm('');
-                          }}
+                          onSelect={() => handleSelect(keyword)}
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
-                              allSelectedKeywords.some(k => k.id === keyword.id) 
-                                ? "opacity-100" 
-                                : "opacity-0"
+                              "mr-2 h-4 w-4 opacity-0"
                             )}
                           />
                           {keyword.name}
@@ -207,9 +176,7 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
                     <CommandGroup>
                       <CommandItem
                         value={searchTerm}
-                        onSelect={() => {
-                          handleCreateNew();
-                        }}
+                        onSelect={handleCreateNew}
                         className="text-blue-600"
                       >
                         <span className="mr-2">+</span>
