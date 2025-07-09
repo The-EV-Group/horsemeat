@@ -41,31 +41,42 @@ export default function Dashboard() {
   const [taskLoading, setTaskLoading] = useState(false);
 
   const fetchMyContractors = async () => {
-    if (!user?.id) return;
+    if (!employee?.id) {
+      console.log('No employee ID found, cannot fetch contractors');
+      return;
+    }
     
     try {
       setContractorsLoading(true);
+      console.log('Fetching contractors for employee ID:', employee.id);
       
-      // Get contractors that belong to the current user
+      // Get contractors that belong to the current employee
       const { data: contractorData, error: contractorError } = await supabase
         .from('contractor')
         .select('id, full_name')
-        .eq('owner_id', user.id);
+        .eq('owner_id', employee.id);
+
+      console.log('Contractor query result:', { contractorData, contractorError });
 
       if (contractorError) throw contractorError;
 
       if (!contractorData || contractorData.length === 0) {
+        console.log('No contractors found for this employee');
         setContractors([]);
         return;
       }
 
       // Get open task counts for each contractor
       const contractorIds = contractorData.map(c => c.id);
+      console.log('Fetching task counts for contractor IDs:', contractorIds);
+      
       const { data: taskCounts, error: taskError } = await supabase
         .from('contractor_task')
         .select('contractor_id')
         .in('contractor_id', contractorIds)
         .in('status', ['in progress', 'overdue']);
+
+      console.log('Task counts query result:', { taskCounts, taskError });
 
       if (taskError) throw taskError;
 
@@ -75,6 +86,8 @@ export default function Dashboard() {
         return acc;
       }, {} as Record<string, number>);
 
+      console.log('Task count map:', taskCountMap);
+
       // Combine contractor data with task counts
       const contractorsWithTasks: ContractorWithTasks[] = contractorData.map(contractor => ({
         id: contractor.id,
@@ -82,6 +95,7 @@ export default function Dashboard() {
         openTaskCount: taskCountMap[contractor.id] || 0
       }));
 
+      console.log('Final contractors with tasks:', contractorsWithTasks);
       setContractors(contractorsWithTasks);
     } catch (error) {
       console.error('Error fetching contractors:', error);
@@ -351,9 +365,14 @@ export default function Dashboard() {
                 <p className="text-gray-600">Loading contractors...</p>
               </div>
             ) : contractors.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                You don't have any contractors assigned to you yet.
-              </p>
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-2">
+                  You don't have any contractors assigned to you yet.
+                </p>
+                <p className="text-sm text-gray-400">
+                  Employee ID: {employee?.id || 'Not found'}
+                </p>
+              </div>
             ) : (
               <div className="space-y-4">
                 {contractors.map((contractor) => (
