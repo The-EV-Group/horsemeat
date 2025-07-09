@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { KeywordSelect } from '@/components/keywords/KeywordSelect';
 import { Search, RotateCcw } from 'lucide-react';
 import { US_STATES } from '@/lib/schemas/contractorSchema';
@@ -21,10 +20,6 @@ interface SearchFiltersProps {
 
 export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
   const [filters, setFilters] = useState<SearchFiltersType>({
-    searchTerm: '',
-    available: null,
-    starCandidate: null,
-    payType: null,
     state: '',
     city: '',
     skills: [],
@@ -39,19 +34,13 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
     const cleanFilters = {
       ...filters,
       state: filters.state || undefined,
-      city: filters.city || undefined,
-      searchTerm: filters.searchTerm || undefined,
-      payType: filters.payType || undefined
+      city: filters.city || undefined
     };
     onSearch(cleanFilters);
   };
 
   const handleReset = () => {
     const resetFilters: SearchFiltersType = {
-      searchTerm: '',
-      available: null,
-      starCandidate: null,
-      payType: null,
       state: '',
       city: '',
       skills: [],
@@ -75,21 +64,9 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
     <Card>
       <CardHeader>
         <CardTitle>Search Filters</CardTitle>
-        <CardDescription>Filter contractors by various criteria</CardDescription>
+        <CardDescription>Filter contractors by location and keywords</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Basic Search */}
-        <div className="space-y-2">
-          <Label htmlFor="search-term">Search Term</Label>
-          <Input
-            id="search-term"
-            type="text"
-            placeholder="Search by name, email, or phone"
-            value={filters.searchTerm}
-            onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-          />
-        </div>
-
         {/* Location Filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -122,69 +99,6 @@ export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
               onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
             />
           </div>
-        </div>
-
-        {/* Status Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <Label>Availability</Label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="available-yes"
-                  checked={filters.available === true}
-                  onCheckedChange={(checked) => 
-                    setFilters(prev => ({ ...prev, available: checked ? true : null }))
-                  }
-                />
-                <Label htmlFor="available-yes">Available</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="available-no"
-                  checked={filters.available === false}
-                  onCheckedChange={(checked) => 
-                    setFilters(prev => ({ ...prev, available: checked ? false : null }))
-                  }
-                />
-                <Label htmlFor="available-no">Unavailable</Label>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label>Star Candidate</Label>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="star-yes"
-                  checked={filters.starCandidate === true}
-                  onCheckedChange={(checked) => 
-                    setFilters(prev => ({ ...prev, starCandidate: checked ? true : null }))
-                  }
-                />
-                <Label htmlFor="star-yes">Star Candidate</Label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pay Type Filter */}
-        <div className="space-y-2">
-          <Label htmlFor="pay-type">Pay Type</Label>
-          <Select 
-            value={filters.payType || 'all-types'} 
-            onValueChange={(value) => setFilters(prev => ({ ...prev, payType: value === 'all-types' ? null : value }))}
-          >
-            <SelectTrigger id="pay-type">
-              <SelectValue placeholder="Select pay type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-types">All Types</SelectItem>
-              <SelectItem value="W2">W2</SelectItem>
-              <SelectItem value="1099">1099</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Keywords */}

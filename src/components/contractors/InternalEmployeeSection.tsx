@@ -47,15 +47,15 @@ export function InternalEmployeeSection({ selectedEmployee, onEmployeeChange }: 
         <div className="space-y-2">
           <Label htmlFor="internal-employee">Internal Employee</Label>
           <Select 
-            value={selectedEmployee || ''} 
-            onValueChange={(value) => onEmployeeChange(value || null)}
+            value={selectedEmployee || 'no-assignment'} 
+            onValueChange={(value) => onEmployeeChange(value === 'no-assignment' ? null : value)}
             disabled={loading}
           >
             <SelectTrigger id="internal-employee">
               <SelectValue placeholder={loading ? "Loading employees..." : "Select an internal employee"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No assignment</SelectItem>
+              <SelectItem value="no-assignment">No assignment</SelectItem>
               {employees.map((employee) => (
                 <SelectItem key={employee.id} value={employee.id}>
                   {employee.full_name || employee.email || 'Unnamed Employee'}

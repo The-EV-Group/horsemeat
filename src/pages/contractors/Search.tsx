@@ -7,17 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Eye, Star, MapPin, DollarSign, Search as SearchIcon } from 'lucide-react';
+import { Eye, Star, MapPin, DollarSign } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export default function SearchContractors() {
-  const { contractors, loading, searchContractors, searchByName, error } = useContractorSearch();
+  const { contractors, loading, searchContractors, error } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
   const [lastSearchFilters, setLastSearchFilters] = useState<SearchFiltersType | null>(null);
-  const [nameSearchTerm, setNameSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('advanced');
   const location = useLocation();
 
   // Check if we should open a specific contractor profile on load
@@ -29,18 +25,20 @@ export default function SearchContractors() {
     }
   }, [location.state]);
 
-  // Handle name search as user types
+  // Load all contractors on initial page load
   useEffect(() => {
-    if (activeTab === 'name' && nameSearchTerm.trim()) {
-      const debounceTimer = setTimeout(() => {
-        searchByName(nameSearchTerm.trim());
-      }, 300);
-      return () => clearTimeout(debounceTimer);
-    } else if (activeTab === 'name' && !nameSearchTerm.trim()) {
-      // Clear results when search term is empty
-      searchByName('');
-    }
-  }, [nameSearchTerm, activeTab, searchByName]);
+    const initialFilters: SearchFiltersType = {
+      state: '',
+      city: '',
+      skills: [],
+      industries: [],
+      companies: [],
+      certifications: [],
+      jobTitles: []
+    };
+    searchContractors(initialFilters);
+    setLastSearchFilters(initialFilters);
+  }, [searchContractors]);
 
   const handleSearch = (filters: SearchFiltersType) => {
     setLastSearchFilters(filters);
@@ -54,18 +52,8 @@ export default function SearchContractors() {
   const handleCloseProfile = () => {
     setSelectedContractorId(null);
     // Refresh the search results if we had previous search filters
-    if (activeTab === 'advanced' && lastSearchFilters) {
+    if (lastSearchFilters) {
       searchContractors(lastSearchFilters);
-    } else if (activeTab === 'name' && nameSearchTerm.trim()) {
-      searchByName(nameSearchTerm.trim());
-    }
-  };
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    // Clear results when switching tabs
-    if (value === 'name') {
-      setNameSearchTerm('');
     }
   };
 
@@ -85,36 +73,7 @@ export default function SearchContractors() {
         <p className="text-gray-600">Find and manage your contractor network</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="advanced">Advanced Search</TabsTrigger>
-          <TabsTrigger value="name">Search by Name</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="advanced" className="space-y-6">
-          <SearchFilters onSearch={handleSearch} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="name" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Search by Name</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  type="text"
-                  placeholder="Type contractor's name..."
-                  value={nameSearchTerm}
-                  onChange={(e) => setNameSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <SearchFilters onSearch={handleSearch} loading={loading} />
 
       <Card>
         <CardHeader>
@@ -128,10 +87,7 @@ export default function SearchContractors() {
             </div>
           ) : contractors.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              {activeTab === 'name' && !nameSearchTerm.trim() 
-                ? "Start typing to search contractors by name"
-                : "No contractors found. Try adjusting your search criteria."
-              }
+              No contractors found. Try adjusting your search criteria.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -142,7 +98,7 @@ export default function SearchContractors() {
                     <TableHead>Location</TableHead>
                     <TableHead>Pay</TableHead>
                     <TableHead>Status</TableHead>
-                    {activeTab === 'advanced' && <TableHead>Match %</TableHead>}
+                    <TableHead>Match %</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -186,15 +142,13 @@ export default function SearchContractors() {
                           {contractor.available ? 'Available' : 'Unavailable'}
                         </Badge>
                       </TableCell>
-                      {activeTab === 'advanced' && (
-                        <TableCell>
-                          {contractor.matchPercentage !== undefined && (
-                            <Badge variant="outline">
-                              {contractor.matchPercentage}%
-                            </Badge>
-                          )}
-                        </TableCell>
-                      )}
+                      <TableCell>
+                        {contractor.matchPercentage !== undefined && (
+                          <Badge variant="outline">
+                            {contractor.matchPercentage}%
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Button
                           variant="outline"
