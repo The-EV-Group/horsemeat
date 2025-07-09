@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -100,15 +101,26 @@ export function useContractorData(contractorId: string) {
 
   const fetchKeywords = async () => {
     try {
+      console.log('Fetching keywords for contractor:', contractorId);
+      
       const { data: keywordData, error: keywordError } = await supabase
         .from('contractor_keyword')
         .select(`
-          note,
-          keyword(id, name, category, inserted_at)
+          keyword:keyword_id (
+            id,
+            name,
+            category,
+            inserted_at
+          )
         `)
         .eq('contractor_id', contractorId);
 
-      if (keywordError) throw keywordError;
+      if (keywordError) {
+        console.error('Error fetching keywords:', keywordError);
+        throw keywordError;
+      }
+
+      console.log('Raw keyword data:', keywordData);
 
       // Transform to categorized structure
       const categorized: CategorizedKeywords = {
@@ -119,11 +131,22 @@ export function useContractorData(contractorId: string) {
         'job titles': []
       };
 
+      // Map database categories to display categories
+      const categoryMap: Record<string, keyof CategorizedKeywords> = {
+        'skill': 'skills',
+        'industry': 'industries',
+        'certification': 'certifications',
+        'company': 'companies',
+        'job_title': 'job titles'
+      };
+
       keywordData?.forEach(item => {
         if (item.keyword) {
-          const category = item.keyword.category as keyof CategorizedKeywords;
-          if (categorized[category]) {
-            categorized[category].push({
+          const dbCategory = item.keyword.category;
+          const displayCategory = categoryMap[dbCategory];
+          
+          if (displayCategory && categorized[displayCategory]) {
+            categorized[displayCategory].push({
               id: item.keyword.id,
               name: item.keyword.name,
               category: item.keyword.category,
@@ -133,6 +156,7 @@ export function useContractorData(contractorId: string) {
         }
       });
 
+      console.log('Categorized keywords:', categorized);
       setKeywords(categorized);
     } catch (error) {
       console.error('Error fetching keywords:', error);
@@ -217,6 +241,8 @@ export function useContractorData(contractorId: string) {
 
   const updateKeywords = async (categorizedKeywords: CategorizedKeywords) => {
     try {
+      console.log('Updating keywords with:', categorizedKeywords);
+      
       // Convert categorized keywords back to flat array
       const allKeywords = Object.entries(categorizedKeywords).flatMap(([category, keywords]) =>
         keywords.map(keyword => ({
@@ -226,7 +252,9 @@ export function useContractorData(contractorId: string) {
         }))
       );
 
-      // Delete existing keywords
+      console.log('Flattened keywords for update:', allKeywords);
+
+      // Delete existing keywords for this contractor
       const { error: deleteError } = await supabase
         .from('contractor_keyword')
         .delete()
@@ -234,7 +262,7 @@ export function useContractorData(contractorId: string) {
 
       if (deleteError) throw deleteError;
 
-      // Insert new keywords
+      // Insert new keywords if any
       if (allKeywords.length > 0) {
         const keywordInserts = allKeywords.map((keyword, index) => ({
           contractor_id: contractorId,
@@ -243,6 +271,8 @@ export function useContractorData(contractorId: string) {
           position: index + 1
         }));
 
+        console.log('Inserting keywords:', keywordInserts);
+
         const { error: insertError } = await supabase
           .from('contractor_keyword')
           .insert(keywordInserts);
@@ -250,6 +280,7 @@ export function useContractorData(contractorId: string) {
         if (insertError) throw insertError;
       }
 
+      // Refresh keywords after update
       await fetchKeywords();
     } catch (error) {
       console.error('Error updating keywords:', error);
