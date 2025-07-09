@@ -1,102 +1,86 @@
-
-import { useState, useEffect, useMemo } from 'react';
-import { Check, ChevronsUpDown, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { useKeywords } from '@/hooks/keywords/useKeywords';
+import { Check, ChevronsUpDown, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Tables } from '@/integrations/supabase/types';
+import { useKeywords } from '@/hooks/keywords/useKeywords';
 
-type Keyword = Tables<'keyword'>;
+export type KeywordType = {
+  id: string;
+  name: string;
+  category?: string;
+};
 
-interface KeywordSelectProps {
-  label: string;
-  category: string;
-  value: Keyword[];
-  onChange: (keywords: Keyword[]) => void;
+export type KeywordSelectProps = {
+  label?: string;
+  category?: string;
+  value: KeywordType[];
+  onChange: (keywords: KeywordType[]) => void;
   helperText?: string;
-}
+};
 
-export function KeywordSelect({ label, category, value, onChange, helperText }: KeywordSelectProps) {
+export function KeywordSelect({ 
+  label = 'Keywords', 
+  category,
+  value = [], 
+  onChange,
+  helperText,
+}: KeywordSelectProps) {
+  const { searchKeywords, createKeyword, searchLoading } = useKeywords(category);
+  
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<Keyword[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<KeywordType[]>([]);
   
-  const { searchKeywords, createKeyword } = useKeywords();
-
-  // Debounce search
-  useEffect(() => {
-    if (!searchTerm.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    const timeoutId = setTimeout(async () => {
-      try {
-        const results = await searchKeywords(searchTerm, category);
-        setSearchResults(results);
-      } catch (error) {
-        console.error('Error searching keywords:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, category, searchKeywords]);
-
-  const availableKeywords = useMemo(() => {
-    return searchResults.filter(keyword => 
-      !value.some(selected => selected.id === keyword.id)
-    );
-  }, [searchResults, value]);
-
-  const handleSelect = (keyword: Keyword) => {
-    const isSelected = value.some(k => k.id === keyword.id);
+  // Handle search term changes
+  const handleSearchChange = useCallback(async (term: string) => {
+    setSearchTerm(term);
     
-    if (isSelected) {
-      onChange(value.filter(k => k.id !== keyword.id));
+    // Our useKeywords hook now handles debouncing internally
+    if (term.trim()) {
+      const results = await searchKeywords(term, category);
+      setSearchResults(results);
     } else {
-      onChange([...value, keyword]);
+      setSearchResults([]);
     }
+  }, [searchKeywords, category]);
+  
+  const handleSelect = useCallback((keyword: KeywordType) => {
+    onChange([...value, keyword]);
     setSearchTerm('');
-  };
-
-  const handleCreateNew = async () => {
-    const trimmedTerm = searchTerm.trim();
-    if (!trimmedTerm) return;
-
-    // Check if keyword already exists
-    const existsInResults = searchResults.some(k => 
-      k.name.toLowerCase() === trimmedTerm.toLowerCase()
-    );
-    const existsInSelected = value.some(k => 
-      k.name.toLowerCase() === trimmedTerm.toLowerCase()
-    );
-
-    if (existsInResults || existsInSelected) {
-      return;
-    }
-
+    setSearchResults([]);
+    setOpen(false);
+  }, [onChange, value]);
+  
+  const handleRemove = useCallback((keyword: KeywordType) => {
+    onChange(value.filter(k => k.id !== keyword.id));
+  }, [onChange, value]);
+  
+  const handleCreateNew = useCallback(async () => {
+    if (!searchTerm.trim() || !category) return;
+    
     try {
-      const newKeyword = await createKeyword(trimmedTerm, category);
+      const newKeyword = await createKeyword(searchTerm, category);
       onChange([...value, newKeyword]);
       setSearchTerm('');
+      setSearchResults([]);
+      setOpen(false);
     } catch (error) {
-      console.error('Error creating keyword:', error);
+      console.error('Failed to create keyword:', error);
     }
-  };
-
-  const handleRemove = (keywordToRemove: Keyword) => {
-    onChange(value.filter(k => k.id !== keywordToRemove.id));
-  };
-
+  }, [searchTerm, category, createKeyword, onChange, value]);
+  
+  // Filter out selected keywords from search results
+  const availableKeywords = useMemo(() => {
+    return searchResults.filter(
+      result => !value.some(selected => selected.id === result.id)
+    );
+  }, [searchResults, value]);
+  
+  // Check if we can create a new keyword
   const canCreateNew = searchTerm.trim() && 
     !searchResults.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase()) &&
     !value.some(k => k.name.toLowerCase() === searchTerm.trim().toLowerCase());
@@ -142,14 +126,18 @@ export function KeywordSelect({ label, category, value, onChange, helperText }: 
             <CommandInput 
               placeholder={`Search ${category}...`}
               value={searchTerm}
-              onValueChange={setSearchTerm}
+              onValueChange={handleSearchChange}
+              className="border-none focus:ring-0"
             />
             <CommandList>
-              {isSearching ? (
-                <CommandEmpty>Searching...</CommandEmpty>
+              {searchLoading ? (
+                <CommandEmpty className="py-6 text-center">
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                  Searching...
+                </CommandEmpty>
               ) : (
                 <>
-                  {availableKeywords.length === 0 && !canCreateNew && (
+                  {searchTerm && availableKeywords.length === 0 && !canCreateNew && (
                     <CommandEmpty>No {category} found.</CommandEmpty>
                   )}
                   
