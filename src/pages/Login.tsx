@@ -24,6 +24,10 @@ export default function Login() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const isValidSignupEmail = (email: string) => {
+    return email.toLowerCase().endsWith('@theevgroup.com');
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -52,6 +56,11 @@ export default function Login() {
     e.preventDefault();
     if (!email || !password) {
       setError('Please fill in all fields');
+      return;
+    }
+
+    if (!isValidSignupEmail(email)) {
+      setError('Sign up is restricted to @theevgroup.com email addresses');
       return;
     }
 
@@ -154,7 +163,8 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="Enter your email"
+                    placeholder="Enter your @theevgroup.com email"
+                    helperText="Only @theevgroup.com email addresses are allowed"
                   />
                   <FormInput
                     label="Password"
@@ -174,7 +184,7 @@ export default function Login() {
                   <Button
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700"
-                    disabled={loading}
+                    disabled={loading || (email && !isValidSignupEmail(email))}
                   >
                     {loading ? 'Creating account...' : 'Create Account'}
                   </Button>

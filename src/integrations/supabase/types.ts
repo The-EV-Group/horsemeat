@@ -24,6 +24,8 @@ export type Database = {
           id: string
           inserted_at: string | null
           notes: string | null
+          owner_id: string | null
+          pay_rate_upper: string | null
           pay_type: string | null
           phone: string | null
           preferred_contact: Database["public"]["Enums"]["contact_method"]
@@ -46,6 +48,8 @@ export type Database = {
           id?: string
           inserted_at?: string | null
           notes?: string | null
+          owner_id?: string | null
+          pay_rate_upper?: string | null
           pay_type?: string | null
           phone?: string | null
           preferred_contact?: Database["public"]["Enums"]["contact_method"]
@@ -68,6 +72,8 @@ export type Database = {
           id?: string
           inserted_at?: string | null
           notes?: string | null
+          owner_id?: string | null
+          pay_rate_upper?: string | null
           pay_type?: string | null
           phone?: string | null
           preferred_contact?: Database["public"]["Enums"]["contact_method"]
@@ -81,7 +87,15 @@ export type Database = {
           travel_anywhere?: boolean
           travel_radius_miles?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contractor_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "internal_employee"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contractor_history: {
         Row: {

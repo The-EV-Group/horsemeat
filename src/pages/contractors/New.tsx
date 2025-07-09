@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -29,6 +30,7 @@ import { TravelSection } from "@/components/contractors/TravelSection";
 import { PaySection } from "@/components/contractors/PaySection";
 import { AdditionalInfoSection } from "@/components/contractors/AdditionalInfoSection";
 import { NewContractorKeywordsSection } from "@/components/contractors/NewContractorKeywordsSection";
+import { InternalEmployeeSection } from "@/components/contractors/InternalEmployeeSection";
 
 // Hooks
 import { useResumeUpload } from "@/hooks/contractors/useResumeUpload";
@@ -70,6 +72,9 @@ export default function NewContractor() {
     companies: [],
     "job titles": [],
   });
+
+  // Internal employee state
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
 
   // Resume upload
   const {
@@ -125,7 +130,7 @@ export default function NewContractor() {
         resumeUrl = await uploadFile(resumeFile);
       }
 
-      // Prepare contractor data
+      // Prepare contractor data with pay rate fields
       const contractorData: TablesInsert<"contractor"> = {
         full_name: data.full_name,
         email: data.email,
@@ -142,11 +147,16 @@ export default function NewContractor() {
         hourly_rate: data.prefers_hourly ? data.hourly_rate : null,
         salary_lower: !data.prefers_hourly ? data.salary_lower : null,
         salary_higher: !data.prefers_hourly ? data.salary_higher : null,
+        // Map to new pay rate fields
+        pay_rate_upper: data.prefers_hourly 
+          ? data.hourly_rate?.toString() 
+          : data.salary_higher?.toString(),
         available: data.available,
         star_candidate: data.star_candidate,
         notes: data.notes,
         resume_url: resumeUrl,
-        summary: data.candidate_summary, // Add candidate_summary field to the summary column
+        summary: data.candidate_summary,
+        owner_id: selectedEmployee, // Link to internal employee
       };
 
       // Create contractor
@@ -241,6 +251,11 @@ export default function NewContractor() {
           errors={form.formState.errors}
           watchedValues={watchedValues}
           setValue={form.setValue}
+        />
+
+        <InternalEmployeeSection
+          selectedEmployee={selectedEmployee}
+          onEmployeeChange={setSelectedEmployee}
         />
 
         <LocationSection

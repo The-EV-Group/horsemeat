@@ -5,200 +5,252 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { KeywordSelect } from '@/components/keywords/KeywordSelect';
-import { Search } from 'lucide-react';
+import { Search, RotateCcw } from 'lucide-react';
 import { US_STATES } from '@/lib/schemas/contractorSchema';
-import type { SearchFilters } from '@/hooks/contractors/useContractorSearch';
+import type { SearchFilters as SearchFiltersType } from '@/hooks/contractors/useContractorSearch';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Keyword = Tables<'keyword'>;
 
 interface SearchFiltersProps {
-  onSearch: (filters: SearchFilters) => void;
+  onSearch: (filters: SearchFiltersType) => void;
   loading: boolean;
 }
 
 export function SearchFilters({ onSearch, loading }: SearchFiltersProps) {
-  const [filters, setFilters] = useState<SearchFilters>({
+  const [filters, setFilters] = useState<SearchFiltersType>({
+    searchTerm: '',
+    available: null,
+    starCandidate: null,
+    payType: null,
+    state: '',
+    city: '',
     skills: [],
     industries: [],
-    certifications: [],
     companies: [],
-    jobTitles: [],
+    certifications: [],
+    jobTitles: []
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate location: either empty, state only, or city + state
-    if (filters.city && !filters.state) {
-      alert('Please select a state when entering a city');
-      return;
-    }
-
-    // Validate pay ranges - allow 0 as minimum
-    if (filters.payType === 'hourly' || filters.payType === 'salary') {
-      if (filters.payMin === undefined || filters.payMax === undefined) {
-        alert('Please enter both minimum and maximum pay values');
-        return;
-      }
-      if (filters.payMin < 0 || filters.payMax < 0) {
-        alert('Pay values must be 0 or greater');
-        return;
-      }
-      if (filters.payMin > filters.payMax) {
-        alert('Minimum pay must be less than or equal to maximum pay');
-        return;
-      }
-    }
-
-    onSearch(filters);
+  const handleSearch = () => {
+    // Remove empty string values
+    const cleanFilters = {
+      ...filters,
+      state: filters.state || undefined,
+      city: filters.city || undefined,
+      searchTerm: filters.searchTerm || undefined,
+      payType: filters.payType || undefined
+    };
+    onSearch(cleanFilters);
   };
 
-  const updateKeywords = (category: keyof Pick<SearchFilters, 'skills' | 'industries' | 'certifications' | 'companies' | 'jobTitles'>, keywords: Keyword[]) => {
-    setFilters(prev => ({ ...prev, [category]: keywords }));
+  const handleReset = () => {
+    const resetFilters: SearchFiltersType = {
+      searchTerm: '',
+      available: null,
+      starCandidate: null,
+      payType: null,
+      state: '',
+      city: '',
+      skills: [],
+      industries: [],
+      companies: [],
+      certifications: [],
+      jobTitles: []
+    };
+    setFilters(resetFilters);
+    onSearch(resetFilters);
+  };
+
+  const updateKeywords = (category: keyof Pick<SearchFiltersType, 'skills' | 'industries' | 'companies' | 'certifications' | 'jobTitles'>, keywords: Keyword[]) => {
+    setFilters(prev => ({
+      ...prev,
+      [category]: keywords
+    }));
   };
 
   return (
-    <Card className="shadow-soft mb-6">
+    <Card>
       <CardHeader>
-        <CardTitle>Search Contractors</CardTitle>
-        <CardDescription>Filter contractors by location, pay, and skills</CardDescription>
+        <CardTitle>Search Filters</CardTitle>
+        <CardDescription>Filter contractors by various criteria</CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Location Filter */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Location</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>State</Label>
-                <Select value={filters.state || 'any-state'} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value === 'any-state' ? undefined : value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any-state">Any State</SelectItem>
-                    {US_STATES.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>City</Label>
-                <Input
-                  placeholder="Enter city (requires state)"
-                  value={filters.city || ''}
-                  onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value || undefined }))}
-                  disabled={!filters.state}
-                />
-              </div>
-            </div>
-          </div>
+      <CardContent className="space-y-6">
+        {/* Basic Search */}
+        <div className="space-y-2">
+          <Label htmlFor="search-term">Search Term</Label>
+          <Input
+            id="search-term"
+            type="text"
+            placeholder="Search by name, email, or phone"
+            value={filters.searchTerm}
+            onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+          />
+        </div>
 
-          {/* Pay Filter */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Desired Pay</h3>
-            <RadioGroup
-              value={filters.payType || 'no-preference'}
-              onValueChange={(value) => setFilters(prev => ({ ...prev, payType: value as SearchFilters['payType'] }))}
+        {/* Location Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Select 
+              value={filters.state} 
+              onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="no-preference" id="no-preference" />
-                <Label htmlFor="no-preference">No Preference</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="hourly" id="hourly" />
-                <Label htmlFor="hourly">Hourly</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="salary" id="salary" />
-                <Label htmlFor="salary">Salary</Label>
-              </div>
-            </RadioGroup>
-
-            {(filters.payType === 'hourly' || filters.payType === 'salary') && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Minimum {filters.payType === 'hourly' ? '($/hour)' : '($/year)'}</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    value={filters.payMin || ''}
-                    onChange={(e) => setFilters(prev => ({ ...prev, payMin: e.target.value ? parseFloat(e.target.value) : undefined }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Maximum {filters.payType === 'hourly' ? '($/hour)' : '($/year)'}</Label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    value={filters.payMax || ''}
-                    onChange={(e) => setFilters(prev => ({ ...prev, payMax: e.target.value ? parseFloat(e.target.value) : undefined }))}
-                  />
-                </div>
-              </div>
-            )}
+              <SelectTrigger id="state">
+                <SelectValue placeholder="Select state" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All States</SelectItem>
+                {US_STATES.map((state) => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Keyword Filters */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Keywords & Skills</h3>
-            <div className="space-y-4">
-              <KeywordSelect
-                label="Skills"
-                category="skills"
-                value={filters.skills}
-                onChange={(keywords) => updateKeywords('skills', keywords)}
-                helperText="Search and select relevant skills"
-              />
-              
-              <KeywordSelect
-                label="Industries"
-                category="industries"
-                value={filters.industries}
-                onChange={(keywords) => updateKeywords('industries', keywords)}
-                helperText="Search and select relevant industries"
-              />
-              
-              <KeywordSelect
-                label="Certifications"
-                category="certifications"
-                value={filters.certifications}
-                onChange={(keywords) => updateKeywords('certifications', keywords)}
-                helperText="Search and select relevant certifications"
-              />
-              
-              <KeywordSelect
-                label="Companies"
-                category="companies"
-                value={filters.companies}
-                onChange={(keywords) => updateKeywords('companies', keywords)}
-                helperText="Search and select relevant companies"
-              />
-              
-              <KeywordSelect
-                label="Job Titles"
-                category="job titles"
-                value={filters.jobTitles}
-                onChange={(keywords) => updateKeywords('jobTitles', keywords)}
-                helperText="Search and select relevant job titles"
-              />
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              type="text"
+              placeholder="Enter city"
+              value={filters.city}
+              onChange={(e) => setFilters(prev => ({ ...prev, city: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {/* Status Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label>Availability</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="available-yes"
+                  checked={filters.available === true}
+                  onCheckedChange={(checked) => 
+                    setFilters(prev => ({ ...prev, available: checked ? true : null }))
+                  }
+                />
+                <Label htmlFor="available-yes">Available</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="available-no"
+                  checked={filters.available === false}
+                  onCheckedChange={(checked) => 
+                    setFilters(prev => ({ ...prev, available: checked ? false : null }))
+                  }
+                />
+                <Label htmlFor="available-no">Unavailable</Label>
+              </div>
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <div className="space-y-3">
+            <Label>Star Candidate</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="star-yes"
+                  checked={filters.starCandidate === true}
+                  onCheckedChange={(checked) => 
+                    setFilters(prev => ({ ...prev, starCandidate: checked ? true : null }))
+                  }
+                />
+                <Label htmlFor="star-yes">Star Candidate</Label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pay Type Filter */}
+        <div className="space-y-2">
+          <Label htmlFor="pay-type">Pay Type</Label>
+          <Select 
+            value={filters.payType || ''} 
+            onValueChange={(value) => setFilters(prev => ({ ...prev, payType: value || null }))}
+          >
+            <SelectTrigger id="pay-type">
+              <SelectValue placeholder="Select pay type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="W2">W2</SelectItem>
+              <SelectItem value="1099">1099</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Keywords */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Keywords & Skills</h3>
+          
+          <KeywordSelect
+            label="Skills"
+            category="skills"
+            value={filters.skills}
+            onChange={(keywords) => updateKeywords('skills', keywords)}
+            helperText="Search and select skills"
+          />
+
+          <KeywordSelect
+            label="Industries"
+            category="industries"
+            value={filters.industries}
+            onChange={(keywords) => updateKeywords('industries', keywords)}
+            helperText="Search and select industries"
+          />
+
+          <KeywordSelect
+            label="Companies"
+            category="companies"
+            value={filters.companies}
+            onChange={(keywords) => updateKeywords('companies', keywords)}
+            helperText="Search and select companies"
+          />
+
+          <KeywordSelect
+            label="Certifications"
+            category="certifications"
+            value={filters.certifications}
+            onChange={(keywords) => updateKeywords('certifications', keywords)}
+            helperText="Search and select certifications"
+          />
+
+          <KeywordSelect
+            label="Job Titles"
+            category="job titles"
+            value={filters.jobTitles}
+            onChange={(keywords) => updateKeywords('jobTitles', keywords)}
+            helperText="Search and select job titles"
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-4 border-t">
+          <Button 
+            onClick={handleSearch} 
+            disabled={loading}
+            className="flex-1"
+          >
             <Search className="mr-2 h-4 w-4" />
-            {loading ? 'Searching...' : 'Search Contractors'}
+            {loading ? 'Searching...' : 'Search'}
           </Button>
-        </form>
+          <Button 
+            variant="outline" 
+            onClick={handleReset}
+            disabled={loading}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

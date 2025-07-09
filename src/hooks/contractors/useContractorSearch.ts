@@ -1,8 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/integrations/supabase/types';
 
-type Contractor = Tables<'contractor'>;
+type Contractor = Tables<'contractor'> & {
+  matchPercentage?: number;
+};
+type Keyword = Tables<'keyword'>;
 
 export interface SearchFilters {
   searchTerm?: string;
@@ -11,16 +15,12 @@ export interface SearchFilters {
   payType?: string | null;
   state?: string;
   city?: string;
-  payMin?: number;
-  payMax?: number;
   skills: Keyword[];
   industries: Keyword[];
   companies: Keyword[];
   certifications: Keyword[];
   jobTitles: Keyword[];
 }
-
-type Keyword = Tables<'keyword'>;
 
 export function useContractorSearch() {
   const [contractors, setContractors] = useState<Contractor[]>([]);
@@ -61,11 +61,16 @@ export function useContractorSearch() {
         query = query.eq('state', filters.state);
       }
 
+      // Apply city filter
+      if (filters.city) {
+        query = query.eq('city', filters.city);
+      }
+
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Filter by keywords if any are selected
+      // Calculate match percentage and filter by keywords
       const allKeywords = [
         ...filters.skills.map(k => k.id),
         ...filters.industries.map(k => k.id),
@@ -75,17 +80,35 @@ export function useContractorSearch() {
       ];
 
       if (allKeywords.length > 0) {
-        // Get contractors that have any of the selected keywords
+        // Get all contractor keywords
         const { data: contractorKeywords, error: keywordError } = await supabase
           .from('contractor_keyword')
-          .select('contractor_id')
-          .in('keyword_id', allKeywords);
+          .select('contractor_id, keyword_id');
 
         if (keywordError) throw keywordError;
 
-        const contractorIds = contractorKeywords?.map(ck => ck.contractor_id) || [];
-        const filteredData = data?.filter(contractor => contractorIds.includes(contractor.id)) || [];
-        setContractors(filteredData);
+        // Calculate match percentages
+        const contractorsWithMatches = data?.map(contractor => {
+          const contractorKeywordIds = contractorKeywords
+            ?.filter(ck => ck.contractor_id === contractor.id)
+            .map(ck => ck.keyword_id) || [];
+          
+          const matchingKeywords = allKeywords.filter(keywordId => 
+            contractorKeywordIds.includes(keywordId)
+          );
+          
+          const matchPercentage = Math.round((matchingKeywords.length / allKeywords.length) * 100);
+          
+          return {
+            ...contractor,
+            matchPercentage
+          };
+        }).filter(contractor => contractor.matchPercentage > 0) || [];
+
+        // Sort by match percentage (highest first)
+        contractorsWithMatches.sort((a, b) => (b.matchPercentage || 0) - (a.matchPercentage || 0));
+
+        setContractors(contractorsWithMatches);
       } else {
         setContractors(data || []);
       }
@@ -97,10 +120,72 @@ export function useContractorSearch() {
     }
   };
 
+  const searchByName = async (searchTerm: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!searchTerm.trim()) {
+        setContractors([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('contractor')
+        .select('*')
+        .ilike('full_name', `%${searchTerm}%`)
+        .order('full_name');
+
+      if (error) throw error;
+      setContractors(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setContractors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteContractor = async (contractorId: string) => {
+    try {
+      // First delete related records
+      await supabase
+        .from('contractor_keyword')
+        .delete()
+        .eq('contractor_id', contractorId);
+
+      await supabase
+        .from('contractor_history')
+        .delete()
+        .eq('contractor_id', contractorId);
+
+      await supabase
+        .from('contractor_task')
+        .delete()
+        .eq('contractor_id', contractorId);
+
+      // Then delete the contractor
+      const { error } = await supabase
+        .from('contractor')
+        .delete()
+        .eq('id', contractorId);
+
+      if (error) throw error;
+
+      // Update local state
+      setContractors(prev => prev.filter(c => c.id !== contractorId));
+    } catch (err) {
+      console.error('Error deleting contractor:', err);
+      throw err;
+    }
+  };
+
   return {
     contractors,
     loading,
     error,
-    searchContractors
+    searchContractors,
+    searchByName,
+    deleteContractor
   };
 }
