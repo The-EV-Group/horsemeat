@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Eye, Star, MapPin, DollarSign } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Eye, Star, MapPin, DollarSign, List } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export default function SearchContractors() {
   const { contractors, loading, searchContractors, error } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const location = useLocation();
 
   // Check if we should open a specific contractor profile on load
@@ -25,25 +26,26 @@ export default function SearchContractors() {
     }
   }, [location.state]);
 
-  // Load all contractors on initial page load - only once
-  useEffect(() => {
-    if (!initialLoadComplete) {
-      const initialFilters: SearchFiltersType = {
-        state: '',
-        city: '',
-        skills: [],
-        industries: [],
-        companies: [],
-        certifications: [],
-        jobTitles: []
-      };
-      searchContractors(initialFilters);
-      setInitialLoadComplete(true);
-    }
-  }, [searchContractors, initialLoadComplete]);
-
   const handleSearch = (filters: SearchFiltersType) => {
+    console.log('Executing search with filters:', filters);
     searchContractors(filters);
+    setViewMode('table');
+  };
+
+  const handleListAllAvailable = async () => {
+    console.log('Listing all available contractors');
+    const availableFilters: SearchFiltersType = {
+      available: true,
+      state: '',
+      city: '',
+      skills: [],
+      industries: [],
+      companies: [],
+      certifications: [],
+      jobTitles: []
+    };
+    await searchContractors(availableFilters);
+    setViewMode('list');
   };
 
   const handleViewProfile = (contractorId: string) => {
@@ -53,6 +55,16 @@ export default function SearchContractors() {
   const handleCloseProfile = () => {
     setSelectedContractorId(null);
   };
+
+  // Sort contractors by match percentage (highest first)
+  const sortedContractors = [...contractors].sort((a, b) => {
+    if (a.matchPercentage !== undefined && b.matchPercentage !== undefined) {
+      return (b.matchPercentage || 0) - (a.matchPercentage || 0);
+    }
+    if (a.matchPercentage !== undefined) return -1;
+    if (b.matchPercentage !== undefined) return 1;
+    return 0;
+  });
 
   if (selectedContractorId) {
     return (
@@ -72,20 +84,123 @@ export default function SearchContractors() {
 
       <SearchFilters onSearch={handleSearch} loading={loading} />
 
+      <div className="flex gap-4 mb-4">
+        <Button
+          onClick={handleListAllAvailable}
+          disabled={loading}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <List className="h-4 w-4" />
+          {loading ? 'Loading...' : 'List All Available'}
+        </Button>
+
+        {contractors.length > 0 && (
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+            >
+              Table
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </Button>
+          </div>
+        )}
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Search Results</CardTitle>
+          <CardTitle>
+            {viewMode === 'list' ? 'Available Contractors' : 'Search Results'}
+            {contractors.length > 0 && (
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                ({contractors.length} found)
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-gray-600">Searching contractors...</p>
+              <p className="text-gray-600">Loading contractors...</p>
             </div>
           ) : contractors.length === 0 ? (
             <p className="text-gray-500 text-center py-8">
-              No contractors found. Try adjusting your search criteria.
+              No contractors found. Try adjusting your search criteria or click "List All Available".
             </p>
+          ) : viewMode === 'list' ? (
+            <ScrollArea className="h-[600px] w-full">
+              <div className="space-y-4 pr-4">
+                {sortedContractors.map((contractor) => (
+                  <Card key={contractor.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewProfile(contractor.id)}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{contractor.full_name}</h3>
+                          {contractor.star_candidate && (
+                            <Star className="h-4 w-4 text-yellow-500" />
+                          )}
+                          {contractor.matchPercentage !== undefined && (
+                            <Badge variant="outline" className="ml-2">
+                              {contractor.matchPercentage}% match
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            <span>
+                              {contractor.city && contractor.state 
+                                ? `${contractor.city}, ${contractor.state}`
+                                : contractor.state 
+                                ? contractor.state
+                                : 'Not Specified'
+                              }
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4" />
+                            <span>
+                              {contractor.prefers_hourly 
+                                ? contractor.pay_rate_upper 
+                                  ? `$${contractor.hourly_rate}-$${contractor.pay_rate_upper}/hr`
+                                  : `$${contractor.hourly_rate}/hr`
+                                : `$${contractor.salary_lower}-$${contractor.salary_higher}`
+                              }
+                            </span>
+                          </div>
+                          
+                          <Badge variant={contractor.available ? 'default' : 'secondary'}>
+                            {contractor.available ? 'Available' : 'Unavailable'}
+                          </Badge>
+                        </div>
+                        
+                        {contractor.summary && (
+                          <p className="text-sm text-gray-700 line-clamp-2">
+                            {contractor.summary}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <Button variant="outline" size="sm" className="ml-4">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </ScrollArea>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -100,7 +215,7 @@ export default function SearchContractors() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contractors.map((contractor) => (
+                  {sortedContractors.map((contractor) => (
                     <TableRow key={contractor.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
