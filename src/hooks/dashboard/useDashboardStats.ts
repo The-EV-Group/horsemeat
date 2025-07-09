@@ -84,67 +84,67 @@ export function useDashboardStats() {
     try {
       console.log('Fetching tasks for user ID:', user.id);
 
-      // Updated query: Use manual join since we now have the foreign key constraint
-      // This will properly fetch creator names from internal_employee table
-      const { data, error } = await supabase
+      // First, get all tasks that the user can see
+      const { data: taskData, error: taskError } = await supabase
         .from('contractor_task')
-        .select(`
-          *,
-          contractor(full_name),
-          internal_employee!contractor_task_created_by_fkey(full_name)
-        `)
+        .select('*')
         .or(`is_public.eq.true,created_by.eq.${user.id}`)
         .order('due_date', { ascending: true, nullsFirst: false });
 
-      console.log('Tasks query result:', { data, error });
+      console.log('Tasks query result:', { data: taskData, error: taskError });
 
-      if (error) {
-        console.error('Tasks query error:', error);
-        // Fallback query if the foreign key reference doesn't work
-        console.log('Attempting fallback query...');
-        
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('contractor_task')
-          .select('*')
-          .or(`is_public.eq.true,created_by.eq.${user.id}`)
-          .order('due_date', { ascending: true, nullsFirst: false });
+      if (taskError) throw taskError;
 
-        if (fallbackError) throw fallbackError;
-
-        // Manually fetch creator names for fallback data
-        const tasksWithNames = await Promise.all(
-          (fallbackData || []).map(async (task) => {
-            // Get contractor name
-            const { data: contractorData } = await supabase
-              .from('contractor')
-              .select('full_name')
-              .eq('id', task.contractor_id)
-              .single();
-
-            // Get creator name from internal_employee
-            const { data: creatorData } = await supabase
-              .from('internal_employee')
-              .select('full_name')
-              .eq('user_id', task.created_by)
-              .single();
-
-            return {
-              ...task,
-              contractor_name: contractorData?.full_name || 'Unknown',
-              creator_name: creatorData?.full_name || 'Unknown'
-            };
-          })
-        );
-
-        console.log('Fallback tasks with names:', tasksWithNames);
-        processTasks(tasksWithNames);
+      if (!taskData || taskData.length === 0) {
+        console.log('No tasks found');
+        setTasks([]);
+        setCompletedTasks([]);
         return;
       }
 
-      const tasksWithNames = (data || []).map(task => ({
+      // Get all unique contractor IDs and creator user IDs
+      const contractorIds = [...new Set(taskData.map(task => task.contractor_id).filter(Boolean))];
+      const creatorUserIds = [...new Set(taskData.map(task => task.created_by).filter(Boolean))];
+
+      console.log('Fetching data for contractor IDs:', contractorIds);
+      console.log('Fetching data for creator user IDs:', creatorUserIds);
+
+      // Fetch contractor names
+      const { data: contractorData, error: contractorError } = await supabase
+        .from('contractor')
+        .select('id, full_name')
+        .in('id', contractorIds);
+
+      if (contractorError) {
+        console.error('Error fetching contractors:', contractorError);
+      }
+
+      // Fetch creator names from internal_employee table
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('internal_employee')
+        .select('user_id, full_name')
+        .in('user_id', creatorUserIds);
+
+      if (creatorError) {
+        console.error('Error fetching creators:', creatorError);
+      }
+
+      console.log('Contractor data:', contractorData);
+      console.log('Creator data:', creatorData);
+
+      // Create lookup maps
+      const contractorMap = new Map(
+        (contractorData || []).map(contractor => [contractor.id, contractor.full_name])
+      );
+      const creatorMap = new Map(
+        (creatorData || []).map(creator => [creator.user_id, creator.full_name])
+      );
+
+      // Enhance tasks with names
+      const tasksWithNames = taskData.map(task => ({
         ...task,
-        contractor_name: task.contractor?.full_name || 'Unknown',
-        creator_name: task.internal_employee?.full_name || 'Unknown'
+        contractor_name: contractorMap.get(task.contractor_id) || 'Unknown',
+        creator_name: creatorMap.get(task.created_by) || 'Unknown'
       }));
 
       console.log('Tasks with names:', tasksWithNames);
