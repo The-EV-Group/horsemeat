@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags } from 'lucide-react';
-import { US_STATES } from '../schemas/contractorSchema';
+import { US_STATES } from '@/lib/schemas/contractorSchema';
 import { useContractorData } from '@/hooks/contractors/useContractorData';
 import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
 import { ContractorHistory } from './ContractorHistory';

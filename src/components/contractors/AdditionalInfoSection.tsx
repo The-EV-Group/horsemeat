@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FormTextarea } from '@/components/shared/FormInput';
 import type { UseFormRegister } from 'react-hook-form';
-import type { ContractorFormData } from '../schemas/contractorSchema';
+import type { ContractorFormData } from '@/lib/schemas/contractorSchema';
 
 interface AdditionalInfoSectionProps {
   register: UseFormRegister<ContractorFormData>;

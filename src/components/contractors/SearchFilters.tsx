@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { KeywordSelect } from '@/components/keywords/KeywordSelect';
 import { Search } from 'lucide-react';
-import { US_STATES } from '../schemas/contractorSchema';
+import { US_STATES } from '@/lib/schemas/contractorSchema';
 import type { SearchFilters } from '@/hooks/contractors/useContractorSearch';
 import type { Tables } from '@/integrations/supabase/types';
 

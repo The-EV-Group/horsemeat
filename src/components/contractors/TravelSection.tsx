@@ -4,7 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { FormInput } from '@/components/shared/FormInput';
 import type { UseFormRegister, FieldErrors } from 'react-hook-form';
-import type { ContractorFormData } from '../schemas/contractorSchema';
+import type { ContractorFormData } from '@/lib/schemas/contractorSchema';
 
 interface TravelSectionProps {
   register: UseFormRegister<ContractorFormData>;

@@ -18,20 +18,20 @@ import type {
 import {
   contractorSchema,
   type ContractorFormData,
-} from "./schemas/contractorSchema";
+} from "@/lib/schemas/contractorSchema";
 
 // Components
-import { CandidateFlagsSection } from "./components/CandidateFlagsSection";
-import { ResumeUploadSection } from "./components/ResumeUploadSection";
-import { BasicInfoSection } from "./components/BasicInfoSection";
-import { LocationSection } from "./components/LocationSection";
-import { TravelSection } from "./components/TravelSection";
-import { PaySection } from "./components/PaySection";
-import { AdditionalInfoSection } from "./components/AdditionalInfoSection";
-import { NewContractorKeywordsSection } from "./components/NewContractorKeywordsSection";
+import { CandidateFlagsSection } from "@/components/contractors/CandidateFlagsSection";
+import { ResumeUploadSection } from "@/components/contractors/ResumeUploadSection";
+import { BasicInfoSection } from "@/components/contractors/BasicInfoSection";
+import { LocationSection } from "@/components/contractors/LocationSection";
+import { TravelSection } from "@/components/contractors/TravelSection";
+import { PaySection } from "@/components/contractors/PaySection";
+import { AdditionalInfoSection } from "@/components/contractors/AdditionalInfoSection";
+import { NewContractorKeywordsSection } from "@/components/contractors/NewContractorKeywordsSection";
 
 // Hooks
-import { useResumeUpload } from "./hooks/useResumeUpload";
+import { useResumeUpload } from "@/hooks/contractors/useResumeUpload";
 
 type Keyword = Tables<"keyword">;
 

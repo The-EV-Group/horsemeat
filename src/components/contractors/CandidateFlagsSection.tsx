@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import type { ContractorFormData } from '../schemas/contractorSchema';
+import type { ContractorFormData } from '@/lib/schemas/contractorSchema';
 
 interface CandidateFlagsSectionProps {
   watchedValues: ContractorFormData;

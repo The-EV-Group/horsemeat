@@ -4,13 +4,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { FormInput } from '@/components/shared/FormInput';
 import type { UseFormRegister } from 'react-hook-form';
-import type { ContractorFormData } from '../schemas/contractorSchema';
-import { US_STATES } from '../schemas/contractorSchema';
+import type { ContractorFormData } from '@/lib/schemas/contractorSchema';
+import { US_STATES } from '@/lib/schemas/contractorSchema';
 
 interface LocationSectionProps {
   register: UseFormRegister<ContractorFormData>;
   watchedValues: ContractorFormData;
-  setValue: (name: keyof ContractorFormData, value: any) => void;
+  setValue: (name: keyof ContractorFormData, value: string | number | boolean | undefined) => void;
 }
 
 export function LocationSection({ register, watchedValues, setValue }: LocationSectionProps) {

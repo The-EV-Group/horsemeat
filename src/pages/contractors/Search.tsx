@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
-import { SearchFilters } from './components/SearchFilters';
-import { ContractorProfile } from './components/ContractorProfile';
+import { useContractorSearch, type SearchFilters as SearchFiltersType } from '@/hooks/contractors/useContractorSearch';
+import { SearchFilters } from '@/components/contractors/SearchFilters';
+import { ContractorProfile } from '@/components/contractors/ContractorProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,9 @@ import { Eye, Star, MapPin, DollarSign } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 export default function SearchContractors() {
-  const { contractors, loading, searchContractors, clearSearch } = useContractorSearch();
+  const { contractors, loading, searchContractors, error } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
-  const [lastSearchFilters, setLastSearchFilters] = useState<any>(null);
+  const [lastSearchFilters, setLastSearchFilters] = useState<SearchFiltersType | null>(null);
   const location = useLocation();
 
   // Check if we should open a specific contractor profile on load
@@ -25,7 +25,7 @@ export default function SearchContractors() {
     }
   }, [location.state]);
 
-  const handleSearch = (filters: any) => {
+  const handleSearch = (filters: SearchFiltersType) => {
     setLastSearchFilters(filters);
     searchContractors(filters);
   };
@@ -41,7 +41,18 @@ export default function SearchContractors() {
       searchContractors(lastSearchFilters);
     } else {
       // Clear search results if no previous search was performed
-      clearSearch();
+      // Use empty filters to reset the search
+      searchContractors({
+        searchTerm: '',
+        available: null,
+        starCandidate: null,
+        payType: null,
+        skills: [],
+        industries: [],
+        companies: [],
+        certifications: [],
+        jobTitles: []
+      });
     }
   };
 
