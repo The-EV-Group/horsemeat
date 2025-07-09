@@ -8,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Edit, Trash, Link2, Info } from 'lucide-react';
+import { Search, Plus, Edit, Trash, Link2, Info, Users } from 'lucide-react';
 import { useKeywords } from '@/hooks/keywords/useKeywords';
+import { LinkedContractorsDialog } from '@/components/keywords/LinkedContractorsDialog';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/shared/use-toast';
+import { useNavigate } from 'react-router-dom';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Keyword = Tables<'keyword'>;
@@ -38,10 +40,12 @@ export default function ManageKeywords() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLinkedContractorsDialogOpen, setIsLinkedContractorsDialogOpen] = useState(false);
   const [selectedKeyword, setSelectedKeyword] = useState<KeywordWithUsage | null>(null);
   const [newKeywordName, setNewKeywordName] = useState('');
   const [editKeywordName, setEditKeywordName] = useState('');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const activeCategory = CATEGORIES.find(cat => cat.key === activeTab);
 
@@ -232,6 +236,21 @@ export default function ManageKeywords() {
     setIsDeleteDialogOpen(true);
   };
 
+  const openLinkedContractorsDialog = (keyword: KeywordWithUsage) => {
+    setSelectedKeyword(keyword);
+    setIsLinkedContractorsDialogOpen(true);
+  };
+
+  const handleContractorClick = (contractorId: string) => {
+    navigate(`/contractors/search?profile=${contractorId}`);
+  };
+
+  const handleUnlinkRefresh = () => {
+    if (activeCategory) {
+      fetchKeywordsWithUsage(activeCategory.dbValue);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -254,7 +273,7 @@ export default function ManageKeywords() {
                 <Link2 className="h-3 w-3 mr-1" />
                 Linked
               </Badge>
-              <span>Keywords currently used by contractors (cannot be deleted)</span>
+              <span>Keywords currently used by contractors</span>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">Unlinked</Badge>
@@ -269,7 +288,7 @@ export default function ManageKeywords() {
         <CardHeader>
           <CardTitle>Keyword Management</CardTitle>
           <CardDescription>
-            Manage keywords by category. Linked keywords are currently used by contractors.
+            Manage keywords by category. Click on linked keywords to view and manage contractors.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -328,7 +347,11 @@ export default function ManageKeywords() {
                               <TableCell className="font-medium">{keyword.name}</TableCell>
                               <TableCell>
                                 {keyword.is_linked ? (
-                                  <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-800">
+                                  <Badge 
+                                    variant="outline" 
+                                    className="bg-blue-50 border-blue-200 text-blue-800 cursor-pointer hover:bg-blue-100"
+                                    onClick={() => openLinkedContractorsDialog(keyword)}
+                                  >
                                     <Link2 className="h-3 w-3 mr-1" />
                                     Linked
                                   </Badge>
@@ -347,6 +370,15 @@ export default function ManageKeywords() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
+                                  {keyword.is_linked && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => openLinkedContractorsDialog(keyword)}
+                                    >
+                                      <Users className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -376,6 +408,15 @@ export default function ManageKeywords() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Linked Contractors Dialog */}
+      <LinkedContractorsDialog
+        keyword={selectedKeyword}
+        isOpen={isLinkedContractorsDialogOpen}
+        onClose={() => setIsLinkedContractorsDialogOpen(false)}
+        onContractorClick={handleContractorClick}
+        onUnlink={handleUnlinkRefresh}
+      />
 
       {/* Add Keyword Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

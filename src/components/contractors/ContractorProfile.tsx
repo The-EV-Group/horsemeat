@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags } from 'lucide-react';
+import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags, Upload } from 'lucide-react';
 import { US_STATES } from '@/lib/schemas/contractorSchema';
 import { useContractorData } from '@/hooks/contractors/useContractorData';
 import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
@@ -48,7 +49,33 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<any>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showResumeUploadDialog, setShowResumeUploadDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ownerEmployee, setOwnerEmployee] = useState<{ full_name: string } | null>(null);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Fetch owner employee info
+  React.useEffect(() => {
+    const fetchOwnerEmployee = async () => {
+      if (localContractor?.owner_id) {
+        try {
+          const { data, error } = await supabase
+            .from('internal_employee')
+            .select('full_name')
+            .eq('id', localContractor.owner_id)
+            .single();
+
+          if (error) throw error;
+          setOwnerEmployee(data);
+        } catch (error) {
+          console.error('Error fetching owner employee:', error);
+        }
+      }
+    };
+
+    fetchOwnerEmployee();
+  }, [localContractor?.owner_id]);
 
   if (dataLoading || !localContractor) {
     return (
@@ -86,7 +113,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     
     try {
       setLoading(true);
-      await updateContractor(localContractor.id, { [editField]: editValue });
+      await updateContractor({ [editField]: editValue });
       setEditField(null);
       setEditValue('');
     } catch (error) {
@@ -149,6 +176,73 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
         // Fallback to the stored URL if we can't generate a new one
         window.open(localContractor.resume_url, '_blank');
       }
+    }
+  };
+
+  const handleResumeUpload = async () => {
+    if (!resumeFile) return;
+
+    try {
+      setLoading(true);
+      setUploadProgress(0);
+
+      // Generate unique filename
+      const fileExt = resumeFile.name.split('.').pop();
+      const fileName = `${localContractor.id}_${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('resumes')
+        .upload(fileName, resumeFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('resumes')
+        .getPublicUrl(fileName);
+
+      // Update contractor record
+      await updateContractor({ resume_url: publicUrl });
+
+      toast.success('Resume uploaded successfully');
+      setShowResumeUploadDialog(false);
+      setResumeFile(null);
+      setUploadProgress(0);
+    } catch (error) {
+      console.error('Error uploading resume:', error);
+      toast.error('Failed to upload resume');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResumeDelete = async () => {
+    try {
+      setLoading(true);
+      
+      // Delete from storage if exists
+      if (localContractor.resume_url) {
+        const urlParts = localContractor.resume_url.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        
+        await supabase.storage
+          .from('resumes')
+          .remove([fileName]);
+      }
+
+      // Update contractor record
+      await updateContractor({ resume_url: null });
+
+      toast.success('Resume deleted successfully');
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      toast.error('Failed to delete resume');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -274,6 +368,11 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
                   {localContractor.available ? 'Available' : 'Unavailable'}
                 </Badge>
                 <Badge variant="outline">{localContractor.pay_type}</Badge>
+                {ownerEmployee && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-800">
+                    Owned by: {ownerEmployee.full_name}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -329,7 +428,17 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
             {renderEditableField('pay_type', 'Pay Type', localContractor.pay_type, 'select', ['W2', '1099'])}
             {renderEditableField('prefers_hourly', 'Prefers Hourly', localContractor.prefers_hourly, 'checkbox')}
             {localContractor.prefers_hourly ? (
-              renderEditableField('hourly_rate', 'Hourly Rate ($)', localContractor.hourly_rate, 'number')
+              <>
+                {renderEditableField('hourly_rate', 'Hourly Rate ($)', localContractor.hourly_rate, 'number')}
+                {localContractor.pay_rate_upper && (
+                  <div className="space-y-2">
+                    <Label className="font-medium text-gray-700">Upper Hourly Rate</Label>
+                    <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border text-sm">
+                      ${localContractor.pay_rate_upper}
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <>
                 {renderEditableField('salary_lower', 'Minimum Salary ($)', localContractor.salary_lower, 'number')}
@@ -365,17 +474,33 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
             {renderEditableField('notes', 'Goals / Interests', localContractor.notes, 'textarea')}
             {renderEditableField('summary', 'Candidate Summary', localContractor.summary, 'textarea')}
             
-            {localContractor.resume_url && (
-              <div className="space-y-2">
-                <Label className="font-medium text-gray-700">Resume</Label>
-                <div className="p-2 bg-gray-50 rounded-md border">
-                  <Button variant="outline" onClick={handleResumeView}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    View Resume
+            {/* Resume Section */}
+            <div className="space-y-2">
+              <Label className="font-medium text-gray-700">Resume</Label>
+              <div className="p-2 bg-gray-50 rounded-md border">
+                {localContractor.resume_url ? (
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleResumeView}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      View Resume
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowResumeUploadDialog(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Replace Resume
+                    </Button>
+                    <Button variant="outline" onClick={handleResumeDelete}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Resume
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" onClick={() => setShowResumeUploadDialog(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload Resume
                   </Button>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -419,6 +544,41 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
           </Button>
         </CardContent>
       </Card>
+
+      {/* Resume Upload Dialog */}
+      <Dialog open={showResumeUploadDialog} onOpenChange={setShowResumeUploadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Resume</DialogTitle>
+            <DialogDescription>
+              Upload a new resume file (PDF format recommended)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+            />
+            {uploadProgress > 0 && (
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResumeUploadDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleResumeUpload} disabled={!resumeFile || loading}>
+              {loading ? 'Uploading...' : 'Upload Resume'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
