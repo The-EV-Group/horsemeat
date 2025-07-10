@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -82,7 +83,42 @@ export default function NewContractor() {
   
   // Resume parsing hook and state
   const { parsing, parsedData, processResumeFile } = useResumeParseIntegration();
-  const [autoParsedKeywords, setAutoParsedKeywords] = useState<ParsedResumeData['keywords'] | null>(null);
+
+  // Helper function to process parsed keywords and update UI state
+  const processAndAddKeywords = async (parsedKeywords: ParsedResumeData['keywords']) => {
+    const updatedKeywords = { ...keywords };
+    let keywordsAdded = 0;
+
+    for (const [category, categoryKeywords] of Object.entries(parsedKeywords)) {
+      if (!Array.isArray(categoryKeywords)) continue;
+
+      const normalizedCategory = category.toLowerCase();
+      if (!updatedKeywords[normalizedCategory as keyof typeof updatedKeywords]) {
+        continue; // Skip unknown categories
+      }
+
+      for (const keyword of categoryKeywords) {
+        // Check if keyword already exists in the current selection
+        const isAlreadySelected = updatedKeywords[normalizedCategory as keyof typeof updatedKeywords]
+          .some(k => k.name.toLowerCase() === keyword.name.toLowerCase());
+
+        if (!isAlreadySelected) {
+          try {
+            // Create the keyword in the database (or fetch if it already exists)
+            const createdKeyword = await createKeyword(keyword.name, normalizedCategory);
+            updatedKeywords[normalizedCategory as keyof typeof updatedKeywords].push(createdKeyword);
+            keywordsAdded++;
+          } catch (error) {
+            console.error(`Error creating keyword ${keyword.name}:`, error);
+          }
+        }
+      }
+    }
+
+    // Update the keywords state to reflect in UI
+    setKeywords(updatedKeywords);
+    return keywordsAdded;
+  };
   
   // Handle file change, upload, and parsing
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,22 +174,36 @@ export default function NewContractor() {
             fieldsToPopulate.notes = contractorData.notes.trim();
             form.setValue('notes', contractorData.notes.trim());
           }
+
+          // Process keywords and add them to the UI
+          let keywordsAdded = 0;
+          if (parsed.keywords) {
+            keywordsAdded = await processAndAddKeywords(parsed.keywords);
+          }
           
-          // Only highlight and show success if we actually populated some fields
-          if (Object.keys(fieldsToPopulate).length > 0) {
-            // Store parsed keywords for later use in submission
-            setAutoParsedKeywords(parsed.keywords);
-            
+          // Only highlight and show success if we actually populated some fields or keywords
+          const totalItemsPopulated = Object.keys(fieldsToPopulate).length + keywordsAdded;
+          if (totalItemsPopulated > 0) {
             // Highlight the auto-filled fields
-            highlightAutoFilledInputs(fieldsToPopulate);
+            if (Object.keys(fieldsToPopulate).length > 0) {
+              highlightAutoFilledInputs(fieldsToPopulate);
+            }
             
-            const fieldCount = Object.keys(fieldsToPopulate).length;
+            let description = '';
+            if (Object.keys(fieldsToPopulate).length > 0 && keywordsAdded > 0) {
+              description = `${Object.keys(fieldsToPopulate).length} field${Object.keys(fieldsToPopulate).length > 1 ? 's' : ''} and ${keywordsAdded} keyword${keywordsAdded > 1 ? 's' : ''} have been pre-filled from the resume.`;
+            } else if (Object.keys(fieldsToPopulate).length > 0) {
+              description = `${Object.keys(fieldsToPopulate).length} field${Object.keys(fieldsToPopulate).length > 1 ? 's' : ''} have been pre-filled from the resume.`;
+            } else if (keywordsAdded > 0) {
+              description = `${keywordsAdded} keyword${keywordsAdded > 1 ? 's' : ''} have been pre-filled from the resume.`;
+            }
+            
             toast({
               title: 'Resume parsed successfully',
-              description: `${fieldCount} field${fieldCount > 1 ? 's' : ''} have been pre-filled with resume data. Please review and modify as needed.`,
+              description: description + ' Please review and modify as needed.',
             });
           } else {
-            console.log('No meaningful data extracted to populate fields');
+            console.log('No meaningful data extracted to populate fields or keywords');
             toast({
               title: 'Resume processed',
               description: 'The resume was processed but no field data could be extracted. Please fill out the form manually.',
@@ -259,70 +309,9 @@ export default function NewContractor() {
       // Reset file state after successful upload
       removeFile();
 
-      // Process keywords and create any new ones
-      const processedKeywords = { ...keywords };
-
-      // Process user-selected keywords first
-      for (const [category, categoryKeywords] of Object.entries(keywords)) {
-        const processedCategoryKeywords: typeof categoryKeywords = [];
-
-        for (const keyword of categoryKeywords) {
-          if (keyword.id.startsWith("local-")) {
-            // Create new keyword
-            try {
-              const createdKeyword = await createKeyword(
-                keyword.name,
-                category
-              );
-              processedCategoryKeywords.push(createdKeyword);
-            } catch (error) {
-              console.error("Error creating keyword:", error);
-            }
-          } else {
-            processedCategoryKeywords.push(keyword);
-          }
-        }
-
-        processedKeywords[category as keyof typeof processedKeywords] =
-          processedCategoryKeywords;
-      }
-      
-      // Process any auto-parsed keywords that aren't already in the selected keywords
-      if (autoParsedKeywords) {
-        for (const [category, categoryKeywords] of Object.entries(autoParsedKeywords)) {
-          if (!Array.isArray(categoryKeywords)) continue;
-          
-          // Get normalized category and ensure we have an array for this category
-          const normalizedCategory = category.toLowerCase();
-          if (!processedKeywords[normalizedCategory as keyof typeof processedKeywords]) {
-            processedKeywords[normalizedCategory as keyof typeof processedKeywords] = [];
-          }
-          
-          // Process each keyword from parsed results
-          for (const keyword of categoryKeywords) {
-            // Skip if already in our processed keywords
-            const isAlreadyIncluded = processedKeywords[normalizedCategory as keyof typeof processedKeywords]
-              .some(k => k.name.toLowerCase() === keyword.name.toLowerCase());
-              
-            if (!isAlreadyIncluded) {
-              try {
-                // Create the new keyword or fetch if it already exists
-                const createdKeyword = await createKeyword(
-                  keyword.name,
-                  normalizedCategory
-                );
-                processedKeywords[normalizedCategory as keyof typeof processedKeywords].push(createdKeyword);
-              } catch (error) {
-                console.error(`Error creating keyword ${keyword.name}:`, error);
-              }
-            }
-          }
-        }
-      }
-
-      // Add keywords if any were selected
+      // Process keywords - all keywords are already processed and stored in the keywords state
       const allKeywords: string[] = [];
-      Object.values(processedKeywords).forEach((categoryKeywords) => {
+      Object.values(keywords).forEach((categoryKeywords) => {
         categoryKeywords.forEach((keyword) => {
           allKeywords.push(keyword.id);
         });
