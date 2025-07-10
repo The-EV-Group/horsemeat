@@ -3,8 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.4";
 import * as pdfjsLib from "npm:pdfjs-dist@3.11.174/legacy/build/pdf.js";
 import OpenAI from "npm:openai";
 
-const SUPABASE_URL     = Deno.env.get("VITE_SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("VITE_SUPABASE_ANON_KEY")!;
+const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const OPENAI_API_KEY   = Deno.env.get("OPENAI_API_KEY")!;
 const MODEL_NAME       = Deno.env.get("MODEL_NAME") ?? "gpt-4o-mini-2024-07-18";
 const TOKEN_CHAR_LIMIT = 12_000 * 4;
@@ -42,7 +42,15 @@ Deno.serve(async (req) => {
     const completion = await openai.chat.completions.create({
       model: MODEL_NAME,
       messages: [
-        { role: "system", content: "You are a helpful resume parser." },
+        {
+          role: "system",
+          content: `
+You are a résumé parser.  Return JSON **only** via the function call.
+• candidate_summary → write a crisp 1–2-sentence professional overview.
+• notes → write 1–2-sentence goals / interests you infer from the résumé.
+If you cannot infer, output an empty string.
+        `
+        },
         { role: "user", content: prompt }
       ],
       tools: [{

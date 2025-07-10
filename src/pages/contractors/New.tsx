@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +33,8 @@ import { InternalEmployeeSection } from "@/components/contractors/InternalEmploy
 
 // Hooks
 import { useResumeUpload } from "@/hooks/contractors/useResumeUpload";
+import { useResumeParseIntegration, ParsedResumeData } from '@/hooks/contractors/useResumeParseIntegration';
+import { highlightAutoFilledInputs, resetFormHighlights } from '@/utils/formUtils';
 
 type Keyword = Tables<"keyword">;
 
@@ -76,16 +77,60 @@ export default function NewContractor() {
   // Internal employee state
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
 
-  // Resume upload
-  const {
-    resumeFile,
-    uploadProgress,
-    uploading,
-    uploadedUrl,
-    handleFileChange,
-    removeFile,
-    uploadFile,
-  } = useResumeUpload();
+  // Resume upload hook and state
+  const { resumeFile, uploadProgress, uploading, uploadedUrl, handleFileChange, removeFile, uploadFile } = useResumeUpload();
+  
+  // Resume parsing hook and state
+  const { parsing, parsedData, processResumeFile } = useResumeParseIntegration();
+  const [autoParsedKeywords, setAutoParsedKeywords] = useState<ParsedResumeData['keywords'] | null>(null);
+  
+  // Handle file change, upload, and parsing
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileChange(e);
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      try {
+        // Process the resume file (upload and parse)
+        const parsed = await processResumeFile(file);
+        
+        if (parsed) {
+          // Auto-fill form fields with parsed contractor data
+          Object.entries(parsed.contractor).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+              // Use type assertion to handle form field types
+              form.setValue(key as keyof ContractorFormData, value);
+            }
+          });
+          
+          // Store parsed keywords for later use in submission
+          setAutoParsedKeywords(parsed.keywords);
+          
+          // Highlight the auto-filled fields
+          highlightAutoFilledInputs(parsed.contractor);
+          
+          toast({
+            title: 'Resume parsed successfully',
+            description: 'Form has been pre-filled with resume data',
+          });
+        }
+      } catch (error) {
+        console.error('Error processing resume:', error);
+        toast({
+          title: 'Resume parsing failed',
+          description: error instanceof Error ? error.message : 'Could not parse resume',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+  
+  // Clear highlights when navigating away
+  useEffect(() => {
+    return () => {
+      resetFormHighlights();
+    };
+  }, []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,6 +213,7 @@ export default function NewContractor() {
       // Process keywords and create any new ones
       const processedKeywords = { ...keywords };
 
+      // Process user-selected keywords first
       for (const [category, categoryKeywords] of Object.entries(keywords)) {
         const processedCategoryKeywords: typeof categoryKeywords = [];
 
@@ -190,6 +236,39 @@ export default function NewContractor() {
 
         processedKeywords[category as keyof typeof processedKeywords] =
           processedCategoryKeywords;
+      }
+      
+      // Process any auto-parsed keywords that aren't already in the selected keywords
+      if (autoParsedKeywords) {
+        for (const [category, categoryKeywords] of Object.entries(autoParsedKeywords)) {
+          if (!Array.isArray(categoryKeywords)) continue;
+          
+          // Get normalized category and ensure we have an array for this category
+          const normalizedCategory = category.toLowerCase();
+          if (!processedKeywords[normalizedCategory as keyof typeof processedKeywords]) {
+            processedKeywords[normalizedCategory as keyof typeof processedKeywords] = [];
+          }
+          
+          // Process each keyword from parsed results
+          for (const keyword of categoryKeywords) {
+            // Skip if already in our processed keywords
+            const isAlreadyIncluded = processedKeywords[normalizedCategory as keyof typeof processedKeywords]
+              .some(k => k.name.toLowerCase() === keyword.name.toLowerCase());
+              
+            if (!isAlreadyIncluded) {
+              try {
+                // Create the new keyword or fetch if it already exists
+                const createdKeyword = await createKeyword(
+                  keyword.name,
+                  normalizedCategory
+                );
+                processedKeywords[normalizedCategory as keyof typeof processedKeywords].push(createdKeyword);
+              } catch (error) {
+                console.error(`Error creating keyword ${keyword.name}:`, error);
+              }
+            }
+          }
+        }
       }
 
       // Add keywords if any were selected
@@ -241,7 +320,7 @@ export default function NewContractor() {
           resumeUrl={uploadedUrl}
           uploadProgress={uploadProgress}
           isUploading={uploading}
-          onFileChange={handleFileChange}
+          onFileChange={handleFileUpload}
           onRemoveFile={removeFile}
           onUrlChange={() => {}} // URL changes handled by the hook internally
         />
