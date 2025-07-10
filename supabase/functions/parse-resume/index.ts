@@ -169,22 +169,64 @@ async function extractPdfText(file: Blob): Promise<string> {
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
+      
       // Define an interface for the text content items
       interface TextItem {
         str: string;
+        transform: number[];
         [key: string]: unknown;
       }
       
-      const pageText = content.items
-        .filter((it: TextItem) => it.str && it.str.trim().length > 0)
-        .map((it: TextItem) => it.str)
-        .join(" ");
+      // Filter out empty items
+      const items = content.items.filter((it: TextItem) => 
+        it.str && it.str.trim().length > 0
+      ) as TextItem[];
       
+      if (items.length === 0) continue;
+      
+      // Group items by y-coordinate (rounded to nearest int for line grouping)
+      const lineMap = new Map<number, TextItem[]>();
+      
+      for (const item of items) {
+        const y = Math.round(item.transform[5]); // y coordinate
+        if (!lineMap.has(y)) {
+          lineMap.set(y, []);
+        }
+        lineMap.get(y)!.push(item);
+      }
+      
+      // Sort lines by y-coordinate (top to bottom, higher y values first in PDF coordinates)
+      const sortedYCoords = Array.from(lineMap.keys()).sort((a, b) => b - a);
+      
+      let pageText = "";
+      let prevY: number | null = null;
+      
+      for (const y of sortedYCoords) {
+        const lineItems = lineMap.get(y)!;
+        
+        // Sort items within the line by x-coordinate (left to right)
+        lineItems.sort((a, b) => a.transform[4] - b.transform[4]);
+        
+        // Check if we need to insert a paragraph break
+        if (prevY !== null && prevY - y > 15) {
+          pageText += "\n\n"; // Insert blank line for paragraph break
+        } else if (prevY !== null) {
+          pageText += "\n"; // Regular line break
+        }
+        
+        // Join items in the line with spaces
+        const lineText = lineItems.map(item => item.str).join(" ");
+        pageText += lineText;
+        
+        prevY = y;
+      }
+
       text += pageText + "\n";
     }
 
-    // Clean up the text to remove excessive whitespace
-    text = text.replace(/\s{3,}/g, " ").trim();
+    // Normalize the extracted text
+    text = normalize(text);
+    
     console.log(`Extracted ${text.length} characters from PDF`);
     
     // Log a preview of the extracted text for debugging
@@ -199,6 +241,22 @@ async function extractPdfText(file: Blob): Promise<string> {
     console.error("PDF extraction failed:", err);
     throw err;
   }
+}
+
+function normalize(text: string): string {
+  return text
+    // Collapse multiple spaces into single spaces
+    .replace(/[ \t]+/g, " ")
+    // Remove "Page X" lines (handles various formats)
+    .replace(/^Page \d+.*$/gm, "")
+    // Clean up excessive newlines while preserving intentional paragraph breaks
+    .replace(/\n{4,}/g, "\n\n\n")
+    // Trim whitespace from each line
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    // Remove empty lines at the beginning and end
+    .trim();
 }
 
 /* ── JSON schema ──────────────────────────────────────────── */
