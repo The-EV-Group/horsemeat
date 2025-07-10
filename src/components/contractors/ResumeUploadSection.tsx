@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Upload, X } from 'lucide-react';
+import { FileText, Upload, X, Loader2 } from 'lucide-react';
 
 interface ResumeUploadSectionProps {
   resumeFile: File | null;
@@ -14,6 +14,7 @@ interface ResumeUploadSectionProps {
   onRemoveFile: () => void;
   onUrlChange?: (url: string) => void;
   isUploading?: boolean;
+  isParsing?: boolean;
 }
 
 export function ResumeUploadSection({
@@ -23,15 +24,30 @@ export function ResumeUploadSection({
   onFileChange,
   onRemoveFile,
   onUrlChange = () => {},
-  isUploading = false
+  isUploading = false,
+  isParsing = false
 }: ResumeUploadSectionProps) {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [isDragging, setIsDragging] = useState(false);
 
+  const isValidFileType = (file: File): boolean => {
+    const validTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword'
+    ];
+    const validExtensions = ['.pdf', '.docx', '.doc'];
+    
+    return validTypes.includes(file.type) || 
+           validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+  };
+
   const handleFileSelect = (file: File) => {
-    // Check if file is PDF
-    if (file.type !== 'application/pdf') {
-      alert('Please select a PDF file only.');
+    console.log('File selected:', file.name, 'Type:', file.type);
+    
+    // Check if file is PDF or DOCX
+    if (!isValidFileType(file)) {
+      alert('Please select a PDF or Word document (.pdf, .docx, .doc).');
       return;
     }
     
@@ -95,15 +111,30 @@ export function ResumeUploadSection({
     if (input) input.value = '';
   };
 
+  const getFileIcon = (fileName: string) => {
+    if (fileName.toLowerCase().endsWith('.pdf')) {
+      return <FileText className="h-4 w-4 text-red-600" />;
+    } else if (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc')) {
+      return <FileText className="h-4 w-4 text-blue-600" />;
+    }
+    return <FileText className="h-4 w-4 text-gray-600" />;
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
           Resume
+          {isParsing && (
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Parsing resume...
+            </div>
+          )}
         </CardTitle>
         <CardDescription>
-          Upload a PDF resume or provide a URL to an existing resume
+          Upload a PDF or Word document (.pdf, .docx, .doc) or provide a URL to an existing resume
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -114,7 +145,7 @@ export function ResumeUploadSection({
             size="sm"
             onClick={() => setUploadMethod('file')}
           >
-            Upload PDF
+            Upload File
           </Button>
           <Button
             type="button"
@@ -133,40 +164,40 @@ export function ResumeUploadSection({
                 isDragging
                   ? 'border-primary bg-primary/10'
                   : 'border-gray-300 hover:border-gray-400'
-              }`}
+              } ${isParsing || isUploading ? 'pointer-events-none opacity-50' : ''}`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => document.getElementById('resume-upload')?.click()}
+              onClick={() => !isParsing && !isUploading && document.getElementById('resume-upload')?.click()}
             >
               <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
               <p className="text-sm text-gray-600 mb-1">
-                Drag and drop your PDF resume here, or click to browse
+                Drag and drop your resume here, or click to browse
               </p>
               <p className="text-xs text-gray-500">
-                Only PDF files are accepted
+                Supports PDF and Word documents (.pdf, .docx, .doc)
               </p>
             </div>
             
             <Input
               id="resume-upload"
               type="file"
-              accept=".pdf,application/pdf"
+              accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
               onChange={onFileChange}
               className="hidden"
-              disabled={isUploading}
+              disabled={isUploading || isParsing}
             />
             
             {resumeFile && (
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md border">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-gray-600" />
+                  {getFileIcon(resumeFile.name)}
                   <span className="text-sm font-medium">{resumeFile.name}</span>
                   <span className="text-xs text-gray-500">
                     ({(resumeFile.size / 1024 / 1024).toFixed(1)} MB)
                   </span>
                 </div>
-                {!isUploading && (
+                {!isUploading && !isParsing && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -190,6 +221,18 @@ export function ResumeUploadSection({
                     className="bg-primary h-2 rounded-full transition-all duration-300" 
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
+                </div>
+              </div>
+            )}
+            
+            {isParsing && (
+              <div className="space-y-2">
+                <div className="text-sm text-blue-600 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Parsing resume and extracting information...
+                </div>
+                <div className="w-full bg-blue-100 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
                 </div>
               </div>
             )}

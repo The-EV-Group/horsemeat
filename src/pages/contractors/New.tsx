@@ -91,15 +91,26 @@ export default function NewContractor() {
     
     if (file) {
       try {
+        console.log('Starting resume processing for:', file.name);
+        
         // Process the resume file (upload and parse)
         const parsed = await processResumeFile(file);
         
         if (parsed) {
+          console.log('Parsed data received:', parsed);
+          
           // Auto-fill form fields with parsed contractor data
           Object.entries(parsed.contractor).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
-              // Use type assertion to handle form field types
-              form.setValue(key as keyof ContractorFormData, value);
+              console.log(`Setting form field ${key} to:`, value);
+              
+              // Handle special field mappings
+              if (key === 'summary') {
+                form.setValue('candidate_summary', value);
+              } else {
+                // Use type assertion to handle form field types
+                form.setValue(key as keyof ContractorFormData, value);
+              }
             }
           });
           
@@ -111,7 +122,7 @@ export default function NewContractor() {
           
           toast({
             title: 'Resume parsed successfully',
-            description: 'Form has been pre-filled with resume data',
+            description: 'Form has been pre-filled with resume data. Please review and modify as needed.',
           });
         }
       } catch (error) {
@@ -320,6 +331,7 @@ export default function NewContractor() {
           resumeUrl={uploadedUrl}
           uploadProgress={uploadProgress}
           isUploading={uploading}
+          isParsing={parsing}
           onFileChange={handleFileUpload}
           onRemoveFile={removeFile}
           onUrlChange={() => {}} // URL changes handled by the hook internally
@@ -374,19 +386,24 @@ export default function NewContractor() {
             type="button"
             variant="outline"
             onClick={() => navigate("/contractors/search")}
-            disabled={isSubmitting}
+            disabled={isSubmitting || parsing}
           >
             Cancel
           </Button>
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || parsing}
             className="min-w-[120px]"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating...
+              </>
+            ) : parsing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Parsing...
               </>
             ) : (
               "Create Contractor"

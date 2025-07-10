@@ -13,25 +13,35 @@ export function useResumeUpload() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(file.type)) {
+      const allowedTypes = [
+        'application/pdf', 
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      const allowedExtensions = ['.pdf', '.doc', '.docx'];
+      
+      const isValidType = allowedTypes.includes(file.type) || 
+                         allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      
+      if (!isValidType) {
         toast({
           title: "Invalid file type",
-          description: "Please upload a PDF or Word document",
+          description: "Please upload a PDF or Word document (.pdf, .docx, .doc)",
           variant: "destructive"
         });
         return;
       }
       
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 10 * 1024 * 1024) { // Increased to 10MB for Word docs
         toast({
           title: "File too large",
-          description: "File size must be less than 5MB",
+          description: "File size must be less than 10MB",
           variant: "destructive"
         });
         return;
       }
       
+      console.log('File accepted:', file.name, 'Type:', file.type, 'Size:', file.size);
       setResumeFile(file);
     }
   };
@@ -51,6 +61,8 @@ export function useResumeUpload() {
       const fileExt = file.name.split('.').pop();
       const filePath = `${crypto.randomUUID()}.${fileExt}`;
       
+      console.log('Uploading file to storage:', filePath);
+      
       // Upload the file to Supabase storage
       const { error } = await supabase.storage.from('resumes').upload(filePath, file, {
         // Handle progress manually since onUploadProgress isn't available in the type
@@ -61,8 +73,11 @@ export function useResumeUpload() {
       setUploadProgress(100);
       
       if (error) {
+        console.error('Upload error:', error);
         throw error;
       }
+      
+      console.log('File uploaded successfully');
       
       // Get a signed URL for the uploaded file (valid for 30 days)
       const { data } = await supabase.storage
@@ -73,9 +88,11 @@ export function useResumeUpload() {
         throw new Error('Failed to generate signed URL');
       }
       
+      console.log('Signed URL generated');
       setUploadedUrl(data.signedUrl);
       return data.signedUrl;
     } catch (error) {
+      console.error('Upload failed:', error);
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : "Failed to upload resume",

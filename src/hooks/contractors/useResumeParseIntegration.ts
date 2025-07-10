@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import mammoth from 'mammoth';
 
-// Define types for parsed resume data
+// Define types for parsed resume data - aligned with form schema
 export interface ParsedResumeData {
   contractor: {
     full_name?: string;
@@ -41,23 +42,16 @@ export function useResumeParseIntegration() {
 
       console.log('Calling parse-resume with params:', params);
       
-      // Call the Edge Function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-resume`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify(params)
+      // Use supabase.functions.invoke instead of direct fetch
+      const { data, error } = await supabase.functions.invoke('parse-resume', {
+        body: params
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error response from parse-resume:', errorText);
-        throw new Error(`Failed to parse resume: ${errorText || response.statusText}`);
+      if (error) {
+        console.error('Error response from parse-resume:', error);
+        throw new Error(`Failed to parse resume: ${error.message}`);
       }
 
-      const data = await response.json();
       console.log('Response from parse-resume:', data);
       
       if (!data.parsed) {
@@ -85,26 +79,35 @@ export function useResumeParseIntegration() {
    */
   const processResumeFile = async (file: File): Promise<ParsedResumeData | null> => {
     try {
+      console.log('Processing file:', file.name, 'Type:', file.type);
+      
       // For DOCX files, extract text in the browser and send directly
-      if (file.name.endsWith('.docx')) {
+      if (file.name.toLowerCase().endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        console.log('Processing DOCX file');
         const buffer = await file.arrayBuffer();
         const { value: text } = await mammoth.extractRawText({ arrayBuffer: buffer });
+        console.log('Extracted text length:', text.length);
         return await callParseResume({ text });
       }
       
       // For PDF files, upload to storage first
-      else if (file.type === 'application/pdf') {
+      else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('Processing PDF file');
         // Generate path for the file
         const fileExt = file.name.split('.').pop();
         const filePath = `${crypto.randomUUID()}.${fileExt}`;
+        
+        console.log('Uploading to storage:', filePath);
         
         // Upload to Supabase storage
         const { error } = await supabase.storage.from('resumes').upload(filePath, file);
         
         if (error) {
+          console.error('Storage upload error:', error);
           throw error;
         }
         
+        console.log('File uploaded, parsing...');
         // Call the parse resume function with bucket and path
         return await callParseResume({ bucket: 'resumes', path: filePath });
       } else {
