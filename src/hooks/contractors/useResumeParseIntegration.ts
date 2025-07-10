@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
@@ -26,6 +25,7 @@ export interface ParsedResumeData {
 
 interface ParsedResponse {
   parsed: ParsedResumeData;
+  error?: string;
 }
 
 export function useResumeParseIntegration() {
@@ -42,7 +42,6 @@ export function useResumeParseIntegration() {
 
       console.log('Calling parse-resume with params:', params);
       
-      // Use supabase.functions.invoke instead of direct fetch
       const { data, error } = await supabase.functions.invoke('parse-resume', {
         body: params
       });
@@ -54,8 +53,30 @@ export function useResumeParseIntegration() {
 
       console.log('Response from parse-resume:', data);
       
+      // Check if there's an error in the response
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       if (!data.parsed) {
         throw new Error('Invalid response format from parse API');
+      }
+      
+      // Validate that we have valid data
+      const hasValidData = data.parsed.contractor && 
+        (data.parsed.contractor.full_name || 
+         data.parsed.contractor.email || 
+         data.parsed.contractor.phone ||
+         data.parsed.contractor.summary);
+      
+      if (!hasValidData) {
+        console.warn('No meaningful data extracted from resume');
+        toast({
+          title: "Limited data extracted",
+          description: "The resume was processed but no meaningful information could be extracted. Please fill out the form manually.",
+          variant: "default"
+        });
+        return null;
       }
       
       setParsedData(data.parsed);

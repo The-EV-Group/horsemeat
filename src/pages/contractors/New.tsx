@@ -96,34 +96,72 @@ export default function NewContractor() {
         // Process the resume file (upload and parse)
         const parsed = await processResumeFile(file);
         
-        if (parsed) {
+        if (parsed && parsed.contractor) {
           console.log('Parsed data received:', parsed);
           
-          // Auto-fill form fields with parsed contractor data
-          Object.entries(parsed.contractor).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-              console.log(`Setting form field ${key} to:`, value);
-              
-              // Handle special field mappings
-              if (key === 'summary') {
-                form.setValue('candidate_summary', value);
-              } else {
-                // Use type assertion to handle form field types
-                form.setValue(key as keyof ContractorFormData, value);
-              }
-            }
-          });
+          // Check if we have meaningful data to populate
+          const contractorData = parsed.contractor;
+          const fieldsToPopulate: { [key: string]: any } = {};
           
-          // Store parsed keywords for later use in submission
-          setAutoParsedKeywords(parsed.keywords);
+          // Only populate fields that have actual values
+          if (contractorData.full_name?.trim()) {
+            fieldsToPopulate.full_name = contractorData.full_name.trim();
+            form.setValue('full_name', contractorData.full_name.trim());
+          }
           
-          // Highlight the auto-filled fields
-          highlightAutoFilledInputs(parsed.contractor);
+          if (contractorData.email?.trim()) {
+            fieldsToPopulate.email = contractorData.email.trim();
+            form.setValue('email', contractorData.email.trim());
+          }
           
-          toast({
-            title: 'Resume parsed successfully',
-            description: 'Form has been pre-filled with resume data. Please review and modify as needed.',
-          });
+          if (contractorData.phone?.trim()) {
+            fieldsToPopulate.phone = contractorData.phone.trim();
+            form.setValue('phone', contractorData.phone.trim());
+          }
+          
+          if (contractorData.city?.trim()) {
+            fieldsToPopulate.city = contractorData.city.trim();
+            form.setValue('city', contractorData.city.trim());
+          }
+          
+          if (contractorData.state?.trim()) {
+            fieldsToPopulate.state = contractorData.state.trim();
+            form.setValue('state', contractorData.state.trim());
+          }
+          
+          if (contractorData.summary?.trim()) {
+            fieldsToPopulate.candidate_summary = contractorData.summary.trim();
+            form.setValue('candidate_summary', contractorData.summary.trim());
+          }
+          
+          if (contractorData.notes?.trim()) {
+            fieldsToPopulate.notes = contractorData.notes.trim();
+            form.setValue('notes', contractorData.notes.trim());
+          }
+          
+          // Only highlight and show success if we actually populated some fields
+          if (Object.keys(fieldsToPopulate).length > 0) {
+            // Store parsed keywords for later use in submission
+            setAutoParsedKeywords(parsed.keywords);
+            
+            // Highlight the auto-filled fields
+            highlightAutoFilledInputs(fieldsToPopulate);
+            
+            const fieldCount = Object.keys(fieldsToPopulate).length;
+            toast({
+              title: 'Resume parsed successfully',
+              description: `${fieldCount} field${fieldCount > 1 ? 's' : ''} have been pre-filled with resume data. Please review and modify as needed.`,
+            });
+          } else {
+            console.log('No meaningful data extracted to populate fields');
+            toast({
+              title: 'Resume processed',
+              description: 'The resume was processed but no field data could be extracted. Please fill out the form manually.',
+              variant: "default"
+            });
+          }
+        } else {
+          console.log('No parsed data received or parsing failed');
         }
       } catch (error) {
         console.error('Error processing resume:', error);

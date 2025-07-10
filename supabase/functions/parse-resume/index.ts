@@ -95,46 +95,47 @@ NEVER make up information. Only extract what's actually present in the text.
     console.log("OpenAI response received:", JSON.stringify({
       id: completion.id,
       model: completion.model,
-      tool_calls: completion.tool_calls ? completion.tool_calls.length : 0,
+      choices: completion.choices?.length,
+      tool_calls: completion.choices?.[0]?.message?.tool_calls?.length || 0,
     }));
 
-    const call = completion.tool_calls?.[0];
+    // Fix: Access tool_calls from the correct path
+    const call = completion.choices?.[0]?.message?.tool_calls?.[0];
     
     // Handle case where there's no function call
     if (!call) {
-      console.error("OpenAI did not return a function call in the response", completion);
-      // Try to return something useful instead of erroring out
-      try {
-        // Default empty structure that matches our schema
-        const defaultResponse = {
-          contractor: {
-            first_name: "",
-            last_name: "",
-            email: "",
-            phone: "",
-            city: "",
-            state: "",
-            candidate_summary: "Could not extract information from resume.",
-            notes: ""
-          },
-          keywords: {
-            skills: [],
-            industries: [],
-            certifications: [],
-            companies: [],
-            "job titles": []
-          }
-        };
-        
-        // Return this default structure instead of an error
-        return json({ parsed: defaultResponse });
-      } catch (err) {
-        return json({ error: "LLM returned no function call and fallback failed" }, 502);
-      }
+      console.error("OpenAI did not return a function call in the response", {
+        completion_id: completion.id,
+        choices: completion.choices,
+        message: completion.choices?.[0]?.message
+      });
+      
+      // Return default empty structure that matches our schema
+      const defaultResponse = {
+        contractor: {
+          full_name: "",
+          email: "",
+          phone: "",
+          city: "",
+          state: "",
+          summary: "",
+          notes: ""
+        },
+        keywords: {
+          skills: [],
+          industries: [],
+          certifications: [],
+          companies: [],
+          "job titles": []
+        }
+      };
+      
+      return json({ parsed: defaultResponse });
     }
 
     try {
       const parsed = JSON.parse(call.function.arguments || "{}");
+      console.log("Successfully parsed function arguments:", parsed);
       return json({ parsed });
     } catch (parseError) {
       console.error("Error parsing function arguments:", parseError, "\nArguments:", call.function.arguments);
