@@ -41,8 +41,9 @@ export function Sidebar() {
     <>
       {/* Logo */}
       <div className="flex items-center px-6 py-4 border-b border-gray-200">
-        <NavLink to="/dashboard" className="flex items-center space-x-2">
+        <NavLink to="/dashboard" className="flex flex-col items-start space-y-1">
           <span className="text-xl font-bold text-primary">Horsemeat++</span>
+          <span className="text-xs text-gray-500 italic">Fuel for Workhorses</span>
         </NavLink>
       </div>
 

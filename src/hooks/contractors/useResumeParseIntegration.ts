@@ -11,7 +11,7 @@ export interface ParsedResumeData {
     phone?: string;
     city?: string;
     state?: string;
-    candidate_summary?: string;
+    summary?: string;
     notes?: string;
   };
   keywords: {
@@ -39,6 +39,8 @@ export function useResumeParseIntegration() {
     try {
       setParsing(true);
 
+      console.log('Calling parse-resume with params:', params);
+      
       // Call the Edge Function
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-resume`, {
         method: 'POST',
@@ -51,10 +53,17 @@ export function useResumeParseIntegration() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Error response from parse-resume:', errorText);
         throw new Error(`Failed to parse resume: ${errorText || response.statusText}`);
       }
 
-      const data = await response.json() as ParsedResponse;
+      const data = await response.json();
+      console.log('Response from parse-resume:', data);
+      
+      if (!data.parsed) {
+        throw new Error('Invalid response format from parse API');
+      }
+      
       setParsedData(data.parsed);
       return data.parsed;
     } catch (error) {
