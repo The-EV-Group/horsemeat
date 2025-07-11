@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Upload, X, Loader2 } from 'lucide-react';
+import { FileText, Upload, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ResumeUploadSectionProps {
   resumeFile: File | null;
@@ -15,6 +16,8 @@ interface ResumeUploadSectionProps {
   onUrlChange?: (url: string) => void;
   isUploading?: boolean;
   isParsing?: boolean;
+  parseSuccess?: boolean;
+  parseError?: boolean;
 }
 
 export function ResumeUploadSection({
@@ -25,7 +28,9 @@ export function ResumeUploadSection({
   onRemoveFile,
   onUrlChange = () => {},
   isUploading = false,
-  isParsing = false
+  isParsing = false,
+  parseSuccess = false,
+  parseError = false
 }: ResumeUploadSectionProps) {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [isDragging, setIsDragging] = useState(false);
@@ -196,6 +201,18 @@ export function ResumeUploadSection({
                   <span className="text-xs text-gray-500">
                     ({(resumeFile.size / 1024 / 1024).toFixed(1)} MB)
                   </span>
+                  {parseSuccess && (
+                    <Badge className="ml-2 bg-green-100 text-green-800 hover:bg-green-200" variant="outline">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Parsed
+                    </Badge>
+                  )}
+                  {parseError && (
+                    <Badge className="ml-2 bg-red-100 text-red-800 hover:bg-red-200" variant="outline">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Parse failed – see console
+                    </Badge>
+                  )}
                 </div>
                 {!isUploading && !isParsing && (
                   <Button

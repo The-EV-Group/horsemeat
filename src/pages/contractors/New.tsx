@@ -83,6 +83,19 @@ export default function NewContractor() {
   
   // Resume parsing hook and state
   const { parsing, parsedData, processResumeFile } = useResumeParseIntegration();
+  
+  // Tracking parse success/failure status
+  const [parseSuccess, setParseSuccess] = useState(false);
+  const [parseError, setParseError] = useState(false);
+  
+  // Reset parse status when parsedData changes
+  useEffect(() => {
+    // Only run after initial mount
+    if (parsedData) {
+      // Effect logic will be triggered whenever parsedData changes
+      // We've already set parseSuccess/parseError in the handleFileUpload function
+    }
+  }, [parsedData]);
 
   // Helper function to process parsed keywords and update UI state
   const processAndAddKeywords = async (parsedKeywords: ParsedResumeData['keywords']) => {
@@ -137,43 +150,37 @@ export default function NewContractor() {
           
           // Check if we have meaningful data to populate
           const contractorData = parsed.contractor;
-          const fieldsToPopulate: { [key: string]: any } = {};
+          const fieldsToPopulate: { [key: string]: string } = {};
           
-          // Only populate fields that have actual values
-          if (contractorData.full_name?.trim()) {
-            fieldsToPopulate.full_name = contractorData.full_name.trim();
-            form.setValue('full_name', contractorData.full_name.trim());
-          }
+          // Handle any value - even single characters or empty strings
+          // Always use trim() to handle any whitespace consistently
+          const value_full_name = contractorData.full_name?.trim() ?? "";
+          fieldsToPopulate.full_name = value_full_name;
+          form.setValue('full_name', value_full_name);
           
-          if (contractorData.email?.trim()) {
-            fieldsToPopulate.email = contractorData.email.trim();
-            form.setValue('email', contractorData.email.trim());
-          }
+          const value_email = contractorData.email?.trim() ?? "";
+          fieldsToPopulate.email = value_email;
+          form.setValue('email', value_email);
           
-          if (contractorData.phone?.trim()) {
-            fieldsToPopulate.phone = contractorData.phone.trim();
-            form.setValue('phone', contractorData.phone.trim());
-          }
+          const value_phone = contractorData.phone?.trim() ?? "";
+          fieldsToPopulate.phone = value_phone;
+          form.setValue('phone', value_phone);
           
-          if (contractorData.city?.trim()) {
-            fieldsToPopulate.city = contractorData.city.trim();
-            form.setValue('city', contractorData.city.trim());
-          }
+          const value_city = contractorData.city?.trim() ?? "";
+          fieldsToPopulate.city = value_city;
+          form.setValue('city', value_city);
           
-          if (contractorData.state?.trim()) {
-            fieldsToPopulate.state = contractorData.state.trim();
-            form.setValue('state', contractorData.state.trim());
-          }
+          const value_state = contractorData.state?.trim() ?? "";
+          fieldsToPopulate.state = value_state;
+          form.setValue('state', value_state);
           
-          if (contractorData.summary?.trim()) {
-            fieldsToPopulate.candidate_summary = contractorData.summary.trim();
-            form.setValue('candidate_summary', contractorData.summary.trim());
-          }
+          const value_summary = contractorData.summary?.trim() ?? "";
+          fieldsToPopulate.candidate_summary = value_summary;
+          form.setValue('candidate_summary', value_summary);
           
-          if (contractorData.notes?.trim()) {
-            fieldsToPopulate.notes = contractorData.notes.trim();
-            form.setValue('notes', contractorData.notes.trim());
-          }
+          const value_notes = contractorData.notes?.trim() ?? "";
+          fieldsToPopulate.notes = value_notes;
+          form.setValue('notes', value_notes);
 
           // Process keywords and add them to the UI
           let keywordsAdded = 0;
@@ -182,7 +189,13 @@ export default function NewContractor() {
           }
           
           // Only highlight and show success if we actually populated some fields or keywords
-          const totalItemsPopulated = Object.keys(fieldsToPopulate).length + keywordsAdded;
+          // Consider any field population as success, even with empty strings
+          setParseSuccess(true);
+          setParseError(false);
+          
+          // Count non-empty fields that were populated
+          const nonEmptyFields = Object.values(fieldsToPopulate).filter(v => v !== "").length;
+          const totalItemsPopulated = nonEmptyFields + keywordsAdded;
           if (totalItemsPopulated > 0) {
             // Highlight the auto-filled fields
             if (Object.keys(fieldsToPopulate).length > 0) {
@@ -215,6 +228,8 @@ export default function NewContractor() {
         }
       } catch (error) {
         console.error('Error processing resume:', error);
+        setParseError(true);
+        setParseSuccess(false);
         toast({
           title: 'Resume parsing failed',
           description: error instanceof Error ? error.message : 'Could not parse resume',
@@ -359,8 +374,14 @@ export default function NewContractor() {
           uploadProgress={uploadProgress}
           isUploading={uploading}
           isParsing={parsing}
+          parseSuccess={parseSuccess}
+          parseError={parseError}
           onFileChange={handleFileUpload}
-          onRemoveFile={removeFile}
+          onRemoveFile={() => {
+            removeFile();
+            setParseSuccess(false);
+            setParseError(false);
+          }}
           onUrlChange={() => {}} // URL changes handled by the hook internally
         />
 
