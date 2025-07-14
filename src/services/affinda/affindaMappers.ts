@@ -8,7 +8,7 @@ import {
 } from './affindaTypes';
 
 /**
- * Split comma-separated keywords into individual keywords
+ * Split keywords into individual keywords with improved handling
  * @param text The text to split
  * @param type The keyword type
  * @returns Array of keyword objects
@@ -16,12 +16,50 @@ import {
 export function splitKeywords(text: string, type: string): ExtractedKeyword[] {
   if (!text) return [];
   
-  return text.split(',')
+  // First try to split by common delimiters
+  let items: string[];
+  
+  // Check for common delimiters in order of preference
+  if (text.includes(',')) {
+    items = text.split(',');
+  } else if (text.includes(';')) {
+    items = text.split(';');
+  } else if (text.includes('•')) {
+    items = text.split('•');
+  } else if (text.includes('|')) {
+    items = text.split('|');
+  } else if (text.includes('/')) {
+    items = text.split('/');
+  } else {
+    // Try to split by capitalized words pattern if there are no commas
+    // This regex splits text like "JavaReactNodeJS" into ["Java", "React", "NodeJS"]
+    const capitalWordSplitRegex = /([A-Z][a-z]+)(?=[A-Z])/g;
+    if (/[a-z][A-Z]/.test(text)) { // Test if there's a lowercase followed by uppercase
+      items = text.replace(capitalWordSplitRegex, '$1,').split(',');
+    } else {
+      // Only split on spaces in very specific cases (comma-separated list without commas)
+      if (text.includes(' and ') || text.includes(' + ') || text.includes(' & ')) {
+        // Split on conjunction indicators and clean up
+        items = text
+          .replace(/ and /gi, ',')
+          .replace(/ \+ /g, ',')
+          .replace(/ & /g, ',')
+          .split(',');
+      } else {
+        // Keep the keyword as is - don't split on spaces
+        items = [text];
+      }
+    }
+  }
+  
+  console.log(`Split "${text}" into ${items.length} items:`, items);
+  
+  return items
     .map(item => item.trim())
     .filter(item => item.length > 0)
     .map(item => ({
       id: uuidv4(),
-      name: item.replace(/^\w/, c => c.toUpperCase()), // Capitalize first letter
+      name: cleanKeywordName(item), // Use cleanKeywordName for consistent cleaning
       type
     }));
 }
@@ -88,9 +126,10 @@ export function processLocationData(contractor: ContractorData, resumeLocation: 
     const parsedLocation = resumeLocation.parsed as AffindaLocationParsed;
     console.log('Using parsed location data:', JSON.stringify(parsedLocation, null, 2));
     
-    // Extract city
+    // Extract city (preserve multi-word city names like 'Gilmanton Iron Works')
     if (parsedLocation.city) {
-      contractor.city = parsedLocation.city;
+      contractor.city = parsedLocation.city.trim();
+      console.log('Using city from parsed location:', contractor.city);
     }
     
     // Extract state - prefer stateCode when available
@@ -118,8 +157,20 @@ export function processLocationData(contractor: ContractorData, resumeLocation: 
       // Clean the street field to remove potential phone numbers
       let streetAddress = parsedLocation.street.trim();
       streetAddress = cleanStreetAddress(streetAddress);
-      contractor.street_address = streetAddress;
-      console.log('Using street field (cleaned):', contractor.street_address);
+      
+      // Check if the street already contains the street number
+      const containsStreetNumber = parsedLocation.streetNumber && 
+                                 streetAddress.startsWith(parsedLocation.streetNumber);
+      
+      // If street number is available and not already in the street name, prepend it
+      if (parsedLocation.streetNumber && !containsStreetNumber) {
+        contractor.street_address = `${parsedLocation.streetNumber} ${streetAddress}`;
+        console.log('Using street number + street field (cleaned):', contractor.street_address);
+      } else {
+        // Street already contains the number or no street number available
+        contractor.street_address = streetAddress;
+        console.log('Using street field only (cleaned):', contractor.street_address);
+      }
     } else {
       // Build from components
       const addressParts = [];
@@ -269,30 +320,32 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
     
     // Extract skills
     if (resumeData.skills && resumeData.skills.length > 0) {
-      console.log('Processing skills:', resumeData.skills.length, 'items');
+      console.log('Processing skills:', resumeData.skills.length, 'items', JSON.stringify(resumeData.skills, null, 2));
       
       resumeData.skills.forEach(skill => {
-        const skillName = typeof skill.parsed === 'string' ? skill.parsed : skill.raw;
-        
-        // Handle comma-separated skills
-        if (skillName && skillName.includes(',')) {
-          const splitSkills = splitKeywords(skillName, 'skill');
-          console.log('Split skills into', splitSkills.length, 'individual skills');
-          extractedKeywords.skills.push(...splitSkills);
-        } else {
-          // Single skill
-          const cleanedSkillName = cleanKeywordName(skillName);
-          if (cleanedSkillName) {
-            extractedKeywords.skills.push({
-              id: uuidv4(),
-              name: cleanedSkillName,
-              type: 'skill'
-            });
-          }
+        // Handle different forms of skill data
+        let skillName = '';
+        if (skill.parsed !== undefined) {
+          skillName = typeof skill.parsed === 'string' ? skill.parsed : skill.raw || '';
+        } else if (skill.raw) {
+          skillName = skill.raw;
+        } else if (typeof skill === 'string') {
+          skillName = skill;
         }
+        
+        console.log(`Processing skill: "${skillName}"`);
+        
+        if (!skillName) return; // Skip empty skills
+        
+        // Always use the enhanced splitKeywords function to handle different delimiter patterns
+        const splitSkills = splitKeywords(skillName, 'skill');
+        // Always add the split skills regardless of count
+        console.log(`Processing skill "${skillName}" into ${splitSkills.length} parts:`, 
+          splitSkills.map(s => s.name).join(', '));
+        extractedKeywords.skills.push(...splitSkills);
       });
       
-      console.log('Extracted skills:', extractedKeywords.skills.length);
+      console.log('Extracted skills:', extractedKeywords.skills.length, extractedKeywords.skills.map(s => s.name));
     }
     
     // Extract job titles
@@ -302,22 +355,13 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
       resumeData.jobTitles.forEach(jobTitle => {
         const titleName = typeof jobTitle.parsed === 'string' ? jobTitle.parsed : jobTitle.raw;
         
-        // Handle comma-separated job titles
-        if (titleName && titleName.includes(',')) {
-          const splitTitles = splitKeywords(titleName, 'job title');
-          console.log('Split job titles into', splitTitles.length, 'individual titles');
-          extractedKeywords["job titles"].push(...splitTitles);
-        } else {
-          // Single job title
-          const cleanedTitleName = cleanKeywordName(titleName);
-          if (cleanedTitleName) {
-            extractedKeywords["job titles"].push({
-              id: uuidv4(),
-              name: cleanedTitleName,
-              type: 'job title'
-            });
-          }
-        }
+        if (!titleName) return; // Skip empty job titles
+        
+        // Always use the enhanced splitKeywords function to handle different delimiter patterns
+        const splitTitles = splitKeywords(titleName, 'job title');
+        console.log(`Processing job title "${titleName}" into ${splitTitles.length} parts:`, 
+          splitTitles.map(s => s.name).join(', '));
+        extractedKeywords["job titles"].push(...splitTitles);
       });
       
       console.log('Extracted job titles:', extractedKeywords["job titles"].length);
@@ -330,22 +374,13 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
       resumeData.companies.forEach(company => {
         const companyName = typeof company.parsed === 'string' ? company.parsed : company.raw;
         
-        // Handle comma-separated companies
-        if (companyName && companyName.includes(',')) {
-          const splitCompanies = splitKeywords(companyName, 'company');
-          console.log('Split companies into', splitCompanies.length, 'individual companies');
-          extractedKeywords.companies.push(...splitCompanies);
-        } else {
-          // Single company
-          const cleanedCompanyName = cleanKeywordName(companyName);
-          if (cleanedCompanyName) {
-            extractedKeywords.companies.push({
-              id: uuidv4(),
-              name: cleanedCompanyName,
-              type: 'company'
-            });
-          }
-        }
+        if (!companyName) return; // Skip empty companies
+        
+        // Always use the enhanced splitKeywords function to handle different delimiter patterns
+        const splitCompanies = splitKeywords(companyName, 'company');
+        console.log(`Processing company "${companyName}" into ${splitCompanies.length} parts:`, 
+          splitCompanies.map(s => s.name).join(', '));
+        extractedKeywords.companies.push(...splitCompanies);
       });
       
       console.log('Extracted companies:', extractedKeywords.companies.length);
@@ -358,22 +393,13 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
       resumeData.industries.forEach(industry => {
         const industryName = typeof industry.parsed === 'string' ? industry.parsed : industry.raw;
         
-        // Handle comma-separated industries
-        if (industryName && industryName.includes(',')) {
-          const splitIndustries = splitKeywords(industryName, 'industry');
-          console.log('Split industries into', splitIndustries.length, 'individual industries');
-          extractedKeywords.industries.push(...splitIndustries);
-        } else {
-          // Single industry
-          const cleanedIndustryName = cleanKeywordName(industryName);
-          if (cleanedIndustryName) {
-            extractedKeywords.industries.push({
-              id: uuidv4(),
-              name: cleanedIndustryName,
-              type: 'industry'
-            });
-          }
-        }
+        if (!industryName) return; // Skip empty industries
+        
+        // Always use the enhanced splitKeywords function to handle different delimiter patterns
+        const splitIndustries = splitKeywords(industryName, 'industry');
+        console.log(`Processing industry "${industryName}" into ${splitIndustries.length} parts:`, 
+          splitIndustries.map(s => s.name).join(', '));
+        extractedKeywords.industries.push(...splitIndustries);
       });
       
       console.log('Extracted industries:', extractedKeywords.industries.length);
@@ -386,22 +412,13 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
       resumeData.certifications.forEach(cert => {
         const certName = typeof cert.parsed === 'string' ? cert.parsed : cert.raw;
         
-        // Handle comma-separated certifications
-        if (certName && certName.includes(',')) {
-          const splitCerts = splitKeywords(certName, 'certification');
-          console.log('Split certifications into', splitCerts.length, 'individual certifications');
-          extractedKeywords.certifications.push(...splitCerts);
-        } else {
-          // Single certification
-          const cleanedCertName = cleanKeywordName(certName);
-          if (cleanedCertName) {
-            extractedKeywords.certifications.push({
-              id: uuidv4(),
-              name: cleanedCertName,
-              type: 'certification'
-            });
-          }
-        }
+        if (!certName) return; // Skip empty certifications
+        
+        // Always use the enhanced splitKeywords function to handle different delimiter patterns
+        const splitCerts = splitKeywords(certName, 'certification');
+        console.log(`Processing certification "${certName}" into ${splitCerts.length} parts:`, 
+          splitCerts.map(s => s.name).join(', '));
+        extractedKeywords.certifications.push(...splitCerts);
       });
       
       console.log('Extracted certifications:', extractedKeywords.certifications.length);

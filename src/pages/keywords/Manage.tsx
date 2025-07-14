@@ -1,22 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Label } from '@/components/ui/label';
-import { Search, Plus, Edit, Trash, Link2, Info, Users } from 'lucide-react';
-import { useKeywords } from '@/hooks/keywords/useKeywords';
-import { LinkedContractorsDialog } from '@/components/keywords/LinkedContractorsDialog';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/shared/use-toast';
-import { useNavigate } from 'react-router-dom';
-import type { Tables } from '@/integrations/supabase/types';
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+import { Search, Plus, Edit, Trash, Link2, Info, Users } from "lucide-react";
+import { useKeywords } from "@/hooks/keywords/useKeywords";
+import { LinkedContractorsDialog } from "@/components/keywords/LinkedContractorsDialog";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/shared/use-toast";
+import { useNavigate } from "react-router-dom";
+import type { Tables } from "@/integrations/supabase/types";
 
-type Keyword = Tables<'keyword'>;
+type Keyword = Tables<"keyword">;
 
 interface KeywordWithUsage extends Keyword {
   is_linked: boolean;
@@ -24,95 +44,129 @@ interface KeywordWithUsage extends Keyword {
 }
 
 const CATEGORIES = [
-  { key: 'skills', label: 'Skills', singular: 'Skill', dbValue: 'skill' },
-  { key: 'industries', label: 'Industries', singular: 'Industry', dbValue: 'industry' },
-  { key: 'certifications', label: 'Certifications', singular: 'Certification', dbValue: 'certification' },
-  { key: 'companies', label: 'Companies', singular: 'Company', dbValue: 'company' },
-  { key: 'job-titles', label: 'Job Titles', singular: 'Job Title', dbValue: 'job_title' },
+  { key: "skills", label: "Skills", singular: "Skill", dbValue: "skill" },
+  {
+    key: "industries",
+    label: "Industries",
+    singular: "Industry",
+    dbValue: "industry",
+  },
+  {
+    key: "certifications",
+    label: "Certifications",
+    singular: "Certification",
+    dbValue: "certification",
+  },
+  {
+    key: "companies",
+    label: "Companies",
+    singular: "Company",
+    dbValue: "company",
+  },
+  {
+    key: "job-titles",
+    label: "Job Titles",
+    singular: "Job Title",
+    dbValue: "job_title",
+  },
 ];
 
 export default function ManageKeywords() {
-  const [activeTab, setActiveTab] = useState('skills');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState("skills");
+  const [searchTerm, setSearchTerm] = useState("");
   const [keywords, setKeywords] = useState<KeywordWithUsage[]>([]);
-  const [filteredKeywords, setFilteredKeywords] = useState<KeywordWithUsage[]>([]);
+  const [filteredKeywords, setFilteredKeywords] = useState<KeywordWithUsage[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isLinkedContractorsDialogOpen, setIsLinkedContractorsDialogOpen] = useState(false);
-  const [selectedKeyword, setSelectedKeyword] = useState<KeywordWithUsage | null>(null);
-  const [newKeywordName, setNewKeywordName] = useState('');
-  const [editKeywordName, setEditKeywordName] = useState('');
+  const [isLinkedContractorsDialogOpen, setIsLinkedContractorsDialogOpen] =
+    useState(false);
+  const [selectedKeyword, setSelectedKeyword] =
+    useState<KeywordWithUsage | null>(null);
+  const [newKeywordName, setNewKeywordName] = useState("");
+  const [editKeywordName, setEditKeywordName] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const activeCategory = CATEGORIES.find(cat => cat.key === activeTab);
+  const activeCategory = CATEGORIES.find((cat) => cat.key === activeTab);
 
   // Fetch keywords with usage information - wrapped in useCallback to prevent recreating on every render
-  const fetchKeywordsWithUsage = useCallback(async (category: string) => {
-    try {
-      setLoading(true);
-      
-      const { data: keywordsData, error: keywordsError } = await supabase
-        .from('keyword')
-        .select(`
+  const fetchKeywordsWithUsage = useCallback(
+    async (category: string) => {
+      try {
+        setLoading(true);
+
+        const { data: keywordsData, error: keywordsError } = await supabase
+          .from("keyword")
+          .select(
+            `
           *,
           contractor_keyword!inner(contractor_id)
-        `)
-        .eq('category', category);
+        `
+          )
+          .eq("category", category);
 
-      if (keywordsError) throw keywordsError;
+        if (keywordsError) throw keywordsError;
 
-      // Get usage counts
-      const keywordIds = keywordsData?.map(k => k.id) || [];
-      const { data: usageData, error: usageError } = await supabase
-        .from('contractor_keyword')
-        .select('keyword_id')
-        .in('keyword_id', keywordIds);
+        // Get usage counts
+        const keywordIds = keywordsData?.map((k) => k.id) || [];
+        const { data: usageData, error: usageError } = await supabase
+          .from("contractor_keyword")
+          .select("keyword_id")
+          .in("keyword_id", keywordIds);
 
-      if (usageError) throw usageError;
+        if (usageError) throw usageError;
 
-      // Count usage per keyword
-      const usageCounts = usageData?.reduce((acc, usage) => {
-        acc[usage.keyword_id] = (acc[usage.keyword_id] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>) || {};
+        // Count usage per keyword
+        const usageCounts =
+          usageData?.reduce(
+            (acc, usage) => {
+              acc[usage.keyword_id] = (acc[usage.keyword_id] || 0) + 1;
+              return acc;
+            },
+            {} as Record<string, number>
+          ) || {};
 
-      // Get all keywords for this category (including unused ones)
-      const { data: allKeywords, error: allError } = await supabase
-        .from('keyword')
-        .select('*')
-        .eq('category', category)
-        .order('name');
+        // Get all keywords for this category (including unused ones)
+        const { data: allKeywords, error: allError } = await supabase
+          .from("keyword")
+          .select("*")
+          .eq("category", category)
+          .order("name");
 
-      if (allError) throw allError;
+        if (allError) throw allError;
 
-      const keywordsWithUsage: KeywordWithUsage[] = allKeywords?.map(keyword => ({
-        ...keyword,
-        is_linked: usageCounts[keyword.id] > 0,
-        contractor_count: usageCounts[keyword.id] || 0,
-      })) || [];
+        const keywordsWithUsage: KeywordWithUsage[] =
+          allKeywords?.map((keyword) => ({
+            ...keyword,
+            is_linked: usageCounts[keyword.id] > 0,
+            contractor_count: usageCounts[keyword.id] || 0,
+          })) || [];
 
-      setKeywords(keywordsWithUsage);
-    } catch (error) {
-      console.error('Error fetching keywords:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch keywords",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast, setKeywords, setLoading]);
+        setKeywords(keywordsWithUsage);
+      } catch (error) {
+        console.error("Error fetching keywords:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch keywords",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast, setKeywords, setLoading]
+  );
 
   // Filter keywords based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredKeywords(keywords);
     } else {
-      const filtered = keywords.filter(keyword =>
+      const filtered = keywords.filter((keyword) =>
         keyword.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredKeywords(filtered);
@@ -128,36 +182,34 @@ export default function ManageKeywords() {
 
   // Reset search when tab changes
   useEffect(() => {
-    setSearchTerm('');
+    setSearchTerm("");
   }, [activeTab]);
 
   const handleAddKeyword = async () => {
     if (!newKeywordName.trim() || !activeCategory) return;
 
     try {
-      const { error } = await supabase
-        .from('keyword')
-        .insert({
-          name: newKeywordName.trim(),
-          category: activeCategory.dbValue
-        });
+      const { error } = await supabase.from("keyword").insert({
+        name: newKeywordName.trim(),
+        category: activeCategory.dbValue,
+      });
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Keyword added successfully"
+        description: "Keyword added successfully",
       });
 
-      setNewKeywordName('');
+      setNewKeywordName("");
       setIsAddDialogOpen(false);
       fetchKeywordsWithUsage(activeCategory.dbValue);
     } catch (error) {
-      console.error('Error adding keyword:', error);
+      console.error("Error adding keyword:", error);
       toast({
         title: "Error",
         description: "Failed to add keyword",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -167,29 +219,29 @@ export default function ManageKeywords() {
 
     try {
       const { error } = await supabase
-        .from('keyword')
+        .from("keyword")
         .update({ name: editKeywordName.trim() })
-        .eq('id', selectedKeyword.id);
+        .eq("id", selectedKeyword.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Keyword updated successfully"
+        description: "Keyword updated successfully",
       });
 
-      setEditKeywordName('');
+      setEditKeywordName("");
       setIsEditDialogOpen(false);
       setSelectedKeyword(null);
       if (activeCategory) {
         fetchKeywordsWithUsage(activeCategory.dbValue);
       }
     } catch (error) {
-      console.error('Error updating keyword:', error);
+      console.error("Error updating keyword:", error);
       toast({
         title: "Error",
         description: "Failed to update keyword",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -199,15 +251,15 @@ export default function ManageKeywords() {
 
     try {
       const { error } = await supabase
-        .from('keyword')
+        .from("keyword")
         .delete()
-        .eq('id', selectedKeyword.id);
+        .eq("id", selectedKeyword.id);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Keyword deleted successfully"
+        description: "Keyword deleted successfully",
       });
 
       setIsDeleteDialogOpen(false);
@@ -216,11 +268,11 @@ export default function ManageKeywords() {
         fetchKeywordsWithUsage(activeCategory.dbValue);
       }
     } catch (error) {
-      console.error('Error deleting keyword:', error);
+      console.error("Error deleting keyword:", error);
       toast({
         title: "Error",
         description: "Failed to delete keyword",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -242,12 +294,11 @@ export default function ManageKeywords() {
   };
 
   const handleContractorClick = (contractorId: string) => {
-    // Navigate to search page with state to open profile and set return path
-    navigate(`/contractors/search`, { 
-      state: { 
-        openProfile: contractorId,
-        returnPath: '/keywords/manage' // Return to keywords manage page when closed
-      } 
+    // Navigate directly to the contractor profile page with return path in state
+    navigate(`/contractors/profile/${contractorId}`, {
+      state: {
+        returnPath: "/keywords", // Return to keywords page when closed
+      },
     });
   };
 
@@ -260,8 +311,12 @@ export default function ManageKeywords() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-primary mb-2">Manage Keywords</h1>
-        <p className="text-gray-600">Organize and maintain your keyword taxonomy</p>
+        <h1 className="text-3xl font-bold text-primary mb-2">
+          Manage Keywords
+        </h1>
+        <p className="text-gray-600">
+          Organize and maintain your keyword taxonomy
+        </p>
       </div>
 
       {/* Legend */}
@@ -275,7 +330,10 @@ export default function ManageKeywords() {
         <CardContent>
           <div className="flex gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-800">
+              <Badge
+                variant="outline"
+                className="bg-blue-50 border-blue-200 text-blue-800"
+              >
                 <Link2 className="h-3 w-3 mr-1" />
                 Linked
               </Badge>
@@ -294,21 +352,30 @@ export default function ManageKeywords() {
         <CardHeader>
           <CardTitle>Keyword Management</CardTitle>
           <CardDescription>
-            Manage keywords by category. Click on linked keywords to view and manage contractors.
+            Manage keywords by category. Click on linked keywords to view and
+            manage contractors.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="space-y-6"
+          >
             <TabsList className="grid w-full grid-cols-5">
-              {CATEGORIES.map(category => (
+              {CATEGORIES.map((category) => (
                 <TabsTrigger key={category.key} value={category.key}>
                   {category.label}
                 </TabsTrigger>
               ))}
             </TabsList>
 
-            {CATEGORIES.map(category => (
-              <TabsContent key={category.key} value={category.key} className="space-y-4">
+            {CATEGORIES.map((category) => (
+              <TabsContent
+                key={category.key}
+                value={category.key}
+                className="space-y-4"
+              >
                 {/* Search and Add Controls */}
                 <div className="flex justify-between items-center gap-4">
                   <div className="relative flex-1 max-w-md">
@@ -333,82 +400,100 @@ export default function ManageKeywords() {
                   <div className="border rounded-lg">
                     {/* Add fixed height container with scrolling */}
                     <div className="max-h-[500px] overflow-y-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Usage Count</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredKeywords.length === 0 ? (
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8 text-gray-500">
-                              {searchTerm ? `No ${category.label.toLowerCase()} found matching "${searchTerm}"` : `No ${category.label.toLowerCase()} found`}
-                            </TableCell>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Usage Count</TableHead>
+                            <TableHead className="text-right">
+                              Actions
+                            </TableHead>
                           </TableRow>
-                        ) : (
-                          filteredKeywords.map(keyword => (
-                            <TableRow key={keyword.id}>
-                              <TableCell className="font-medium">{keyword.name}</TableCell>
-                              <TableCell>
-                                {keyword.is_linked ? (
-                                  <Badge 
-                                    variant="outline" 
-                                    className="bg-blue-50 border-blue-200 text-blue-800 cursor-pointer hover:bg-blue-100"
-                                    onClick={() => openLinkedContractorsDialog(keyword)}
-                                  >
-                                    <Link2 className="h-3 w-3 mr-1" />
-                                    Linked
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">Unlinked</Badge>
-                                )}
+                        </TableHeader>
+                        <TableBody>
+                          {filteredKeywords.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={4}
+                                className="text-center py-8 text-gray-500"
+                              >
+                                {searchTerm
+                                  ? `No ${category.label.toLowerCase()} found matching "${searchTerm}"`
+                                  : `No ${category.label.toLowerCase()} found`}
                               </TableCell>
-                              <TableCell>
-                                {keyword.contractor_count > 0 ? (
-                                  <span className="text-blue-600 font-medium">
-                                    {keyword.contractor_count} contractor{keyword.contractor_count !== 1 ? 's' : ''}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">Not used</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  {keyword.is_linked && (
+                            </TableRow>
+                          ) : (
+                            filteredKeywords.map((keyword) => (
+                              <TableRow key={keyword.id}>
+                                <TableCell className="font-medium">
+                                  {keyword.name}
+                                </TableCell>
+                                <TableCell>
+                                  {keyword.is_linked ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-blue-50 border-blue-200 text-blue-800 cursor-pointer hover:bg-blue-100"
+                                      onClick={() =>
+                                        openLinkedContractorsDialog(keyword)
+                                      }
+                                    >
+                                      <Link2 className="h-3 w-3 mr-1" />
+                                      Linked
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">Unlinked</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {keyword.contractor_count > 0 ? (
+                                    <span className="text-blue-600 font-medium">
+                                      {keyword.contractor_count} contractor
+                                      {keyword.contractor_count !== 1
+                                        ? "s"
+                                        : ""}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">
+                                      Not used
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    {keyword.is_linked && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                          openLinkedContractorsDialog(keyword)
+                                        }
+                                      >
+                                        <Users className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => openLinkedContractorsDialog(keyword)}
+                                      onClick={() => openEditDialog(keyword)}
                                     >
-                                      <Users className="h-4 w-4" />
+                                      <Edit className="h-4 w-4" />
                                     </Button>
-                                  )}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openEditDialog(keyword)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openDeleteDialog(keyword)}
-                                    disabled={keyword.is_linked}
-                                  >
-                                    <Trash className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => openDeleteDialog(keyword)}
+                                      disabled={keyword.is_linked}
+                                    >
+                                      <Trash className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
                     </div>
                   </div>
                 )}
@@ -433,7 +518,8 @@ export default function ManageKeywords() {
           <DialogHeader>
             <DialogTitle>Add New {activeCategory?.singular}</DialogTitle>
             <DialogDescription>
-              Enter the name for the new {activeCategory?.singular.toLowerCase()}.
+              Enter the name for the new{" "}
+              {activeCategory?.singular.toLowerCase()}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -444,7 +530,7 @@ export default function ManageKeywords() {
                 value={newKeywordName}
                 onChange={(e) => setNewKeywordName(e.target.value)}
                 placeholder={`Enter ${activeCategory?.singular.toLowerCase()} name`}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddKeyword()}
               />
             </div>
           </div>
@@ -452,7 +538,10 @@ export default function ManageKeywords() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddKeyword} disabled={!newKeywordName.trim()}>
+            <Button
+              onClick={handleAddKeyword}
+              disabled={!newKeywordName.trim()}
+            >
               Add {activeCategory?.singular}
             </Button>
           </DialogFooter>
@@ -476,15 +565,21 @@ export default function ManageKeywords() {
                 value={editKeywordName}
                 onChange={(e) => setEditKeywordName(e.target.value)}
                 placeholder={`Enter ${activeCategory?.singular.toLowerCase()} name`}
-                onKeyDown={(e) => e.key === 'Enter' && handleEditKeyword()}
+                onKeyDown={(e) => e.key === "Enter" && handleEditKeyword()}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleEditKeyword} disabled={!editKeywordName.trim()}>
+            <Button
+              onClick={handleEditKeyword}
+              disabled={!editKeywordName.trim()}
+            >
               Update {activeCategory?.singular}
             </Button>
           </DialogFooter>
@@ -497,18 +592,25 @@ export default function ManageKeywords() {
           <DialogHeader>
             <DialogTitle>Delete {activeCategory?.singular}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedKeyword?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{selectedKeyword?.name}"? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           {selectedKeyword?.is_linked && (
             <Alert>
               <AlertDescription>
-                This keyword is currently linked to {selectedKeyword.contractor_count} contractor{selectedKeyword.contractor_count !== 1 ? 's' : ''} and cannot be deleted.
+                This keyword is currently linked to{" "}
+                {selectedKeyword.contractor_count} contractor
+                {selectedKeyword.contractor_count !== 1 ? "s" : ""} and cannot
+                be deleted.
               </AlertDescription>
             </Alert>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button

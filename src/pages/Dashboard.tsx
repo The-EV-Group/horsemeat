@@ -116,11 +116,12 @@ export default function Dashboard() {
   };
 
   const handleViewContractorProfile = (contractorId: string) => {
-    // Set state to include both the contractor ID and the return path
-    navigate(`/contractors/search`, { 
+    console.log('Dashboard: Navigating to contractor profile:', contractorId);
+    // Navigate directly to the contractor profile page with return path in state
+    navigate(`/contractors/profile/${contractorId}`, { 
       state: { 
-        openProfile: contractorId,
-        returnPath: '/dashboard'  // Return to dashboard when closed
+        returnPath: '/dashboard',  // Return to dashboard when closed
+        source: 'dashboard' // Track the source of navigation
       } 
     });
   };
@@ -199,7 +200,14 @@ export default function Dashboard() {
   };
 
   const openContractorProfile = (contractorId: string) => {
-    navigate(`/contractors/search`, { state: { openProfile: contractorId } });
+    console.log('Dashboard: Opening contractor profile from task card:', contractorId);
+    // Navigate directly to the contractor profile page with return path in state
+    navigate(`/contractors/profile/${contractorId}`, { 
+      state: { 
+        returnPath: '/dashboard',  // Return to dashboard when closed
+        source: 'dashboard-task' // Track the source as a task in dashboard
+      } 
+    });
   };
 
   const getStatusColor = (status: string) => {

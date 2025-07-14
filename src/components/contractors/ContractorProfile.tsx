@@ -132,16 +132,8 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
   };
 
   const handleClose = () => {
-    if (returnToPath) {
-      // If we have a return path, navigate there
-      console.log('Navigating to return path:', returnToPath);
-      // Use navigate with replace to avoid adding to history stack
-      navigate(returnToPath, { replace: true });
-    } else {
-      // Otherwise use the standard onClose callback
-      console.log('Using standard onClose');
-      onClose();
-    }
+    console.log('Closing contractor profile');
+    onClose();
   };
 
   const handleDelete = async () => {

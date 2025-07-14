@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import NewContractor from "./pages/contractors/New";
 import SearchContractors from "./pages/contractors/Search";
+import ContractorProfilePage from "./pages/contractors/Profile";
 import PotentialRecruits from "./pages/recruits/List";
 import AISearch from "./pages/AISearch";
 import ManageKeywords from "./pages/keywords/Manage";
@@ -60,6 +61,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <SearchContractors />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contractors/profile/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ContractorProfilePage />
                   </Layout>
                 </ProtectedRoute>
               }
