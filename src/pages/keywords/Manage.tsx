@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -49,8 +49,8 @@ export default function ManageKeywords() {
 
   const activeCategory = CATEGORIES.find(cat => cat.key === activeTab);
 
-  // Fetch keywords with usage information
-  const fetchKeywordsWithUsage = async (category: string) => {
+  // Fetch keywords with usage information - wrapped in useCallback to prevent recreating on every render
+  const fetchKeywordsWithUsage = useCallback(async (category: string) => {
     try {
       setLoading(true);
       
@@ -105,7 +105,7 @@ export default function ManageKeywords() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast, setKeywords, setLoading]);
 
   // Filter keywords based on search term
   useEffect(() => {
@@ -124,7 +124,7 @@ export default function ManageKeywords() {
     if (activeCategory) {
       fetchKeywordsWithUsage(activeCategory.dbValue);
     }
-  }, [activeTab]);
+  }, [activeTab, activeCategory, fetchKeywordsWithUsage]);
 
   // Reset search when tab changes
   useEffect(() => {
@@ -242,7 +242,13 @@ export default function ManageKeywords() {
   };
 
   const handleContractorClick = (contractorId: string) => {
-    navigate(`/contractors/search?profile=${contractorId}`);
+    // Navigate to search page with state to open profile and set return path
+    navigate(`/contractors/search`, { 
+      state: { 
+        openProfile: contractorId,
+        returnPath: '/keywords/manage' // Return to keywords manage page when closed
+      } 
+    });
   };
 
   const handleUnlinkRefresh = () => {
@@ -325,6 +331,8 @@ export default function ManageKeywords() {
                   <div className="text-center py-8">Loading keywords...</div>
                 ) : (
                   <div className="border rounded-lg">
+                    {/* Add fixed height container with scrolling */}
+                    <div className="max-h-[500px] overflow-y-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -401,6 +409,7 @@ export default function ManageKeywords() {
                         )}
                       </TableBody>
                     </Table>
+                    </div>
                   </div>
                 )}
               </TabsContent>

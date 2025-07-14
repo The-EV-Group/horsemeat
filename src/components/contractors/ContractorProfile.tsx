@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,9 +26,15 @@ type Contractor = Tables<'contractor'>;
 interface ContractorProfileProps {
   contractorId: string;
   onClose: () => void;
+  /**
+   * Optional path to navigate to when closing the profile
+   * If provided, navigates to this path instead of using onClose
+   */
+  returnToPath?: string;
 }
 
-export function ContractorProfile({ contractorId, onClose }: ContractorProfileProps) {
+export function ContractorProfile({ contractorId, onClose, returnToPath }: ContractorProfileProps) {
+  const navigate = useNavigate();
   const {
     contractor: localContractor,
     history,
@@ -124,6 +131,18 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     }
   };
 
+  const handleClose = () => {
+    if (returnToPath) {
+      // If we have a return path, navigate there
+      console.log('Navigating to:', returnToPath);
+      navigate(returnToPath);
+    } else {
+      // Otherwise use the standard onClose callback
+      console.log('Using standard onClose');
+      onClose();
+    }
+  };
+
   const handleDelete = async () => {
     try {
       setLoading(true);
@@ -138,8 +157,8 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
       // Close the dialog first
       setShowDeleteDialog(false);
       
-      // Use the onClose callback to properly close the profile and clear search
-      onClose();
+      // Use our handleClose method to ensure proper navigation
+      handleClose();
       
     } catch (error) {
       console.error('Error deleting contractor:', error);
@@ -376,7 +395,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
               </div>
             </div>
           </div>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={handleClose}>
             <X className="mr-2 h-4 w-4" />
             Close
           </Button>

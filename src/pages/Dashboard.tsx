@@ -116,7 +116,13 @@ export default function Dashboard() {
   };
 
   const handleViewContractorProfile = (contractorId: string) => {
-    navigate(`/contractors/search`, { state: { openProfile: contractorId } });
+    // Set state to include both the contractor ID and the return path
+    navigate(`/contractors/search`, { 
+      state: { 
+        openProfile: contractorId,
+        returnPath: '/dashboard'  // Return to dashboard when closed
+      } 
+    });
   };
 
   const handleUpdateTask = async () => {
@@ -384,7 +390,7 @@ export default function Dashboard() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                 {contractors.map((contractor) => (
                   <div key={contractor.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                     <div className="flex items-center gap-4">
@@ -459,7 +465,7 @@ export default function Dashboard() {
               No active tasks found. Create tasks in contractor profiles to see them here.
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
               {filteredTasks.map(renderTaskCard)}
             </div>
           )}
@@ -488,7 +494,7 @@ export default function Dashboard() {
               No completed tasks yet.
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
               {completedTasks.map(renderTaskCard)}
             </div>
           )}

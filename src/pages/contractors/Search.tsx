@@ -17,10 +17,21 @@ export default function SearchContractors() {
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const location = useLocation();
 
+  // Track the returnPath for when closing the contractor profile
+  const [returnToPath, setReturnToPath] = useState<string | undefined>(undefined);
+
   // Check if we should open a specific contractor profile on load
   useEffect(() => {
     if (location.state?.openProfile) {
+      // Set the selected contractor ID
       setSelectedContractorId(location.state.openProfile);
+      
+      // Store the return path if provided
+      if (location.state.returnPath) {
+        console.log('Setting return path:', location.state.returnPath);
+        setReturnToPath(location.state.returnPath);
+      }
+      
       // Clear the navigation state to prevent reopening on refresh
       window.history.replaceState({}, document.title);
     }
@@ -61,6 +72,7 @@ export default function SearchContractors() {
       <ContractorProfile
         contractorId={selectedContractorId}
         onClose={handleCloseProfile}
+        returnToPath={returnToPath}
       />
     );
   }
