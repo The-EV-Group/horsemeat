@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { parseResumeWithAffinda, ParsedResumeData } from '@/services/affindaService';
+import { parseResumeWithAffinda, ParsedResumeData } from '@/services/affinda';
 
 export function useAffindaResumeParser() {
   const [parsing, setParsing] = useState(false);

@@ -34,7 +34,7 @@ import { InternalEmployeeSection } from "@/components/contractors/InternalEmploy
 // Hooks
 import { useResumeUpload } from "@/hooks/contractors/useResumeUpload";
 import { useAffindaResumeParser } from '@/hooks/contractors/useAffindaResumeParser';
-import { ParsedResumeData } from '@/services/affindaService';
+import { ParsedResumeData } from '@/services/affinda';
 import { highlightAutoFilledInputs, resetFormHighlights } from '@/utils/formUtils';
 
 type Keyword = Tables<"keyword">;
