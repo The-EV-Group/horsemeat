@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
 
@@ -8,8 +8,11 @@ interface ContractorData {
   full_name: string;
   email: string | null;
   phone: string | null;
+  street_address: string | null;
   city: string | null;
   state: string | null;
+  zip_code: string | null;
+  country: string | null;
   summary: string | null;
   hourly_rate: number | null;
   salary_lower: number | null;
@@ -84,7 +87,7 @@ export function useContractorData(contractorId: string) {
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchContractor = async () => {
+  const fetchContractor = useCallback(async () => {
     try {
       const { data: contractorData, error: contractorError } = await supabase
         .from('contractor')
@@ -93,13 +96,14 @@ export function useContractorData(contractorId: string) {
         .single();
 
       if (contractorError) throw contractorError;
+
       setContractor(contractorData);
     } catch (error) {
       console.error('Error fetching contractor:', error);
     }
-  };
+  }, [contractorId]);
 
-  const fetchKeywords = async () => {
+  const fetchKeywords = useCallback(async () => {
     try {
       console.log('Fetching keywords for contractor:', contractorId);
       
@@ -161,9 +165,9 @@ export function useContractorData(contractorId: string) {
     } catch (error) {
       console.error('Error fetching keywords:', error);
     }
-  };
+  }, [contractorId]);
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('contractor_task')
@@ -185,9 +189,9 @@ export function useContractorData(contractorId: string) {
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
-  };
+  }, [contractorId]);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('contractor_history')
@@ -209,9 +213,9 @@ export function useContractorData(contractorId: string) {
     } catch (error) {
       console.error('Error fetching history:', error);
     }
-  };
+  }, [contractorId]);
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('internal_employee')
@@ -222,7 +226,7 @@ export function useContractorData(contractorId: string) {
     } catch (error) {
       console.error('Error fetching employees:', error);
     }
-  };
+  }, []);
 
   const updateContractor = async (updates: Partial<ContractorData>) => {
     try {
@@ -402,7 +406,7 @@ export function useContractorData(contractorId: string) {
     };
 
     fetchData();
-  }, [contractorId, user]);
+  }, [contractorId, user, fetchContractor, fetchKeywords, fetchTasks, fetchHistory, fetchEmployees]);
 
   return {
     contractor,

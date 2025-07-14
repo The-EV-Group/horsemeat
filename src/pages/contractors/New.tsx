@@ -290,13 +290,17 @@ export default function NewContractor() {
       }
 
       // Prepare contractor data with pay rate fields
-      const contractorData: TablesInsert<"contractor"> = {
+      // Using type assertion to include new fields that may not be in the type definition yet
+      const contractorData = {
         full_name: data.full_name,
         email: data.email,
         phone: data.phone,
         preferred_contact: data.preferred_contact as Enums<"contact_method">,
+        street_address: data.street_address,
         city: data.city,
         state: data.state,
+        zip_code: data.zip_code,
+        country: data.country,
         travel_anywhere: data.travel_anywhere,
         travel_radius_miles: data.travel_anywhere
           ? null
@@ -318,8 +322,8 @@ export default function NewContractor() {
         owner_id: selectedEmployee, // Link to internal employee
       };
 
-      // Create contractor
-      const contractorId = await createContractor(contractorData);
+      // Create contractor - use type assertion to handle new fields
+      const contractorId = await createContractor(contractorData as TablesInsert<"contractor">);
 
       // Reset file state after successful upload
       removeFile();

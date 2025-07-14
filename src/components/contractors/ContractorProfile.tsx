@@ -47,7 +47,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
   const { deleteContractor } = useContractorSearch();
 
   const [editField, setEditField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState<any>('');
+  const [editValue, setEditValue] = useState<string | number | boolean | null>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showResumeUploadDialog, setShowResumeUploadDialog] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     );
   }
 
-  const handleEdit = (field: string, currentValue: any) => {
+  const handleEdit = (field: string, currentValue: string | number | boolean | null) => {
     setEditField(field);
     setEditValue(currentValue);
   };
@@ -246,7 +246,7 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
     }
   };
 
-  const renderEditableField = (field: string, label: string, value: any, type: 'text' | 'number' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' = 'text', options?: string[]) => (
+  const renderEditableField = (field: string, label: string, value: string | number | boolean | null, type: 'text' | 'number' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' = 'text', options?: string[]) => (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="font-medium text-gray-700">{label}</Label>
@@ -409,8 +409,11 @@ export function ContractorProfile({ contractorId, onClose }: ContractorProfilePr
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {renderEditableField('street_address', 'Street Address', localContractor.street_address)}
             {renderEditableField('city', 'City', localContractor.city)}
             {renderEditableField('state', 'State', localContractor.state, 'select', US_STATES)}
+            {renderEditableField('zip_code', 'Zip Code', localContractor.zip_code)}
+            {renderEditableField('country', 'Country', localContractor.country)}
             {renderEditableField('travel_anywhere', 'Willing to Travel Anywhere', localContractor.travel_anywhere, 'checkbox')}
             {!localContractor.travel_anywhere && renderEditableField('travel_radius_miles', 'Travel Radius (miles)', localContractor.travel_radius_miles, 'number')}
           </CardContent>

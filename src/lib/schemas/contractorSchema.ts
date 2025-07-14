@@ -8,8 +8,11 @@ export const contractorSchema = z.object({
   phone: z.string().min(10, 'Phone must be 10 digits').max(10, 'Phone must be 10 digits').regex(/^\d{10}$/, 'Phone must be exactly 10 digits'),
   
   // Location
+  street_address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
+  zip_code: z.string().optional(),
+  country: z.string().optional(),
   
   // Contact preference
   preferred_contact: z.enum(['email', 'phone', 'text']),

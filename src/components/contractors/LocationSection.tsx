@@ -20,27 +20,50 @@ export function LocationSection({ register, watchedValues, setValue }: LocationS
         <CardTitle>Location</CardTitle>
         <CardDescription>Geographic information</CardDescription>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CardContent className="grid grid-cols-1 gap-6">
         <FormInput
-          label="City"
-          {...register('city')}
-          placeholder="New York"
+          label="Street Address"
+          {...register('street_address')}
+          placeholder="123 Main St"
         />
         
-        <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">State</Label>
-          <Select value={watchedValues.state} onValueChange={(value) => setValue('state', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
-            <SelectContent>
-              {US_STATES.map((state) => (
-                <SelectItem key={state} value={state}>
-                  {state}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormInput
+            label="City"
+            {...register('city')}
+            placeholder="New York"
+          />
+          
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700">State</Label>
+            <Select value={watchedValues.state} onValueChange={(value) => setValue('state', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select state" />
+              </SelectTrigger>
+              <SelectContent>
+                {US_STATES.map((state) => (
+                  <SelectItem key={state} value={state}>
+                    {state}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormInput
+            label="Zip Code"
+            {...register('zip_code')}
+            placeholder="10001"
+          />
+          
+          <FormInput
+            label="Country"
+            {...register('country')}
+            placeholder="United States"
+            defaultValue="United States"
+          />
         </div>
       </CardContent>
     </Card>
