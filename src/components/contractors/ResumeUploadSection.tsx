@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, Upload, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ResumeUploadSectionProps {
   resumeFile: File | null;
@@ -18,6 +19,8 @@ interface ResumeUploadSectionProps {
   isParsing?: boolean;
   parseSuccess?: boolean;
   parseError?: boolean;
+  enableParsing?: boolean;
+  onToggleParsing?: (enabled: boolean) => void;
 }
 
 export function ResumeUploadSection({
@@ -30,7 +33,9 @@ export function ResumeUploadSection({
   isUploading = false,
   isParsing = false,
   parseSuccess = false,
-  parseError = false
+  parseError = false,
+  enableParsing = true,
+  onToggleParsing = () => {}
 }: ResumeUploadSectionProps) {
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [isDragging, setIsDragging] = useState(false);
@@ -132,15 +137,33 @@ export function ResumeUploadSection({
           <FileText className="h-5 w-5" />
           Resume
           {isParsing && (
-            <div className="flex items-center gap-2 text-sm text-blue-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Parsing resume...
-            </div>
+            <Badge className="ml-2 bg-blue-100 text-blue-800 hover:bg-blue-200" variant="outline">
+              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              Parsing
+            </Badge>
           )}
         </CardTitle>
         <CardDescription>
-          Upload a PDF or Word document (.pdf, .docx, .doc) or provide a URL to an existing resume
+          Upload a resume file or provide a URL
         </CardDescription>
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="enable-parsing" 
+              checked={enableParsing}
+              onCheckedChange={(checked) => onToggleParsing(!!checked)}
+              disabled={isUploading || isParsing}
+            />
+            <Label htmlFor="enable-parsing" className="text-sm text-gray-600">
+              Pre-parse resume to auto-fill fields
+            </Label>
+          </div>
+          {enableParsing && (
+            <div className="text-xs text-gray-500">
+              Powered by Affinda
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2">
@@ -242,17 +265,7 @@ export function ResumeUploadSection({
               </div>
             )}
             
-            {isParsing && (
-              <div className="space-y-2">
-                <div className="text-sm text-blue-600 flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Parsing resume and extracting information...
-                </div>
-                <div className="w-full bg-blue-100 rounded-full h-2">
-                  <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
-                </div>
-              </div>
-            )}
+            {/* Parsing indicator removed to avoid duplication */}
           </div>
         )}
 

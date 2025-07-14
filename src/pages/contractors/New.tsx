@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -34,7 +33,8 @@ import { InternalEmployeeSection } from "@/components/contractors/InternalEmploy
 
 // Hooks
 import { useResumeUpload } from "@/hooks/contractors/useResumeUpload";
-import { useResumeParseIntegration, ParsedResumeData } from '@/hooks/contractors/useResumeParseIntegration';
+import { useAffindaResumeParser } from '@/hooks/contractors/useAffindaResumeParser';
+import { ParsedResumeData } from '@/services/affindaService';
 import { highlightAutoFilledInputs, resetFormHighlights } from '@/utils/formUtils';
 
 type Keyword = Tables<"keyword">;
@@ -81,21 +81,20 @@ export default function NewContractor() {
   // Resume upload hook and state
   const { resumeFile, uploadProgress, uploading, uploadedUrl, handleFileChange, removeFile, uploadFile } = useResumeUpload();
   
-  // Resume parsing hook and state
-  const { parsing, parsedData, processResumeFile } = useResumeParseIntegration();
+  // Resume parsing hooks and state - using only Affinda
+  const { parsing: affindaParsing, parseResume: parseResumeWithAffinda } = useAffindaResumeParser();
+  
+  // Enable/disable parsing toggle
+  const [enableParsing, setEnableParsing] = useState(true);
   
   // Tracking parse success/failure status
   const [parseSuccess, setParseSuccess] = useState(false);
   const [parseError, setParseError] = useState(false);
   
-  // Reset parse status when parsedData changes
-  useEffect(() => {
-    // Only run after initial mount
-    if (parsedData) {
-      // Effect logic will be triggered whenever parsedData changes
-      // We've already set parseSuccess/parseError in the handleFileUpload function
-    }
-  }, [parsedData]);
+  // Parsing state
+  const parsing = affindaParsing;
+  
+  // No need for this effect anymore since we're only using Affinda
 
   // Helper function to process parsed keywords and update UI state
   const processAndAddKeywords = async (parsedKeywords: ParsedResumeData['keywords']) => {
@@ -138,12 +137,12 @@ export default function NewContractor() {
     handleFileChange(e);
     const file = e.target.files?.[0];
     
-    if (file) {
+    if (file && enableParsing) {
       try {
         console.log('Starting resume processing for:', file.name);
         
-        // Process the resume file (upload and parse)
-        const parsed = await processResumeFile(file);
+        // Use Affinda for parsing - no fallback to OpenAI
+        const parsed = await parseResumeWithAffinda(file);
         
         if (parsed && parsed.contractor) {
           console.log('Parsed data received:', parsed);
@@ -166,6 +165,7 @@ export default function NewContractor() {
           fieldsToPopulate.phone = value_phone;
           form.setValue('phone', value_phone);
           
+          // Address fields
           const value_city = contractorData.city?.trim() ?? "";
           fieldsToPopulate.city = value_city;
           form.setValue('city', value_city);
@@ -174,18 +174,44 @@ export default function NewContractor() {
           fieldsToPopulate.state = value_state;
           form.setValue('state', value_state);
           
-          const value_summary = contractorData.summary?.trim() ?? "";
+          // New address fields from our updated Affinda mapping
+          const value_street_address = contractorData.street_address?.trim() ?? "";
+          fieldsToPopulate.street_address = value_street_address;
+          form.setValue('street_address', value_street_address);
+          
+          const value_zip_code = contractorData.zip_code?.trim() ?? "";
+          fieldsToPopulate.zip_code = value_zip_code;
+          form.setValue('zip_code', value_zip_code);
+          
+          const value_country = contractorData.country?.trim() ?? "";
+          fieldsToPopulate.country = value_country;
+          form.setValue('country', value_country);
+          
+          // Handle summary that might not be a string
+          const value_summary = typeof contractorData.summary === 'string' ? contractorData.summary.trim() : String(contractorData.summary || "");
           fieldsToPopulate.candidate_summary = value_summary;
           form.setValue('candidate_summary', value_summary);
           
-          const value_notes = contractorData.notes?.trim() ?? "";
+          // Handle notes that might not be a string
+          const value_notes = typeof contractorData.notes === 'string' ? contractorData.notes.trim() : String(contractorData.notes || "");
           fieldsToPopulate.notes = value_notes;
           form.setValue('notes', value_notes);
 
           // Process keywords and add them to the UI
           let keywordsAdded = 0;
           if (parsed.keywords) {
+            console.log('Processing keywords from parsed data:', parsed.keywords);
+            console.log('Skills:', parsed.keywords.skills?.length || 0);
+            console.log('Job titles:', parsed.keywords["job titles"]?.length || 0);
+            console.log('Companies:', parsed.keywords.companies?.length || 0);
+            console.log('Industries:', parsed.keywords.industries?.length || 0);
+            console.log('Certifications:', parsed.keywords.certifications?.length || 0);
+            
+            // Process keywords by category
             keywordsAdded = await processAndAddKeywords(parsed.keywords);
+            console.log('Total keywords added:', keywordsAdded);
+          } else {
+            console.warn('No keywords found in parsed data');
           }
           
           // Only highlight and show success if we actually populated some fields or keywords
@@ -376,17 +402,14 @@ export default function NewContractor() {
           resumeFile={resumeFile}
           resumeUrl={uploadedUrl}
           uploadProgress={uploadProgress}
+          onFileChange={handleFileUpload}
+          onRemoveFile={removeFile}
           isUploading={uploading}
           isParsing={parsing}
           parseSuccess={parseSuccess}
           parseError={parseError}
-          onFileChange={handleFileUpload}
-          onRemoveFile={() => {
-            removeFile();
-            setParseSuccess(false);
-            setParseError(false);
-          }}
-          onUrlChange={() => {}} // URL changes handled by the hook internally
+          enableParsing={enableParsing}
+          onToggleParsing={setEnableParsing}
         />
 
         <BasicInfoSection

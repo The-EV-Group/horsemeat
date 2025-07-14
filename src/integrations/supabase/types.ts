@@ -45,6 +45,7 @@ export type Database = {
         Insert: {
           available?: boolean | null
           city?: string | null
+          country?: string | null
           email?: string | null
           full_name?: string | null
           hourly_rate?: number | null
@@ -62,13 +63,16 @@ export type Database = {
           salary_lower?: number | null
           star_candidate?: boolean | null
           state?: string | null
+          street_address?: string | null
           summary?: string | null
           travel_anywhere?: boolean
+          zip_code?: string | null
           travel_radius_miles?: number | null
         }
         Update: {
           available?: boolean | null
           city?: string | null
+          country?: string | null
           email?: string | null
           full_name?: string | null
           hourly_rate?: number | null
@@ -86,8 +90,10 @@ export type Database = {
           salary_lower?: number | null
           star_candidate?: boolean | null
           state?: string | null
+          street_address?: string | null
           summary?: string | null
           travel_anywhere?: boolean
+          zip_code?: string | null
           travel_radius_miles?: number | null
         }
         Relationships: [

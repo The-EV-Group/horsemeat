@@ -137,23 +137,61 @@ export function useKeywords(category?: string) {
     const dbCategory = normalizeCategory(category);
 
     try {
-      const { data, error } = await supabase
+      // First, check if the keyword already exists
+      const { data: existingKeyword, error: searchError } = await supabase
+        .from('keyword')
+        .select('*')
+        .eq('name', trimmed)
+        .eq('category', dbCategory)
+        .single();
+
+      if (searchError && searchError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        // Real error, not just "not found"
+        throw searchError;
+      }
+
+      // If keyword exists, return it immediately
+      if (existingKeyword) {
+        console.log(`Keyword already exists: ${trimmed} (${dbCategory})`);
+        return existingKeyword;
+      }
+
+      // If not found, create new keyword
+      const { data: newKeyword, error: insertError } = await supabase
         .from('keyword')
         .insert({ name: trimmed, category: dbCategory })
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) {
+        // If there's a race condition and another client created the same keyword
+        // between our check and insert, just fetch the existing one
+        if (insertError.code === '23505') { // unique constraint violation
+          const { data: conflictKeyword, error: refetchError } = await supabase
+            .from('keyword')
+            .select('*')
+            .eq('name', trimmed)
+            .eq('category', dbCategory)
+            .single();
+          
+          if (refetchError) throw refetchError;
+          console.log(`Keyword already created by another process: ${trimmed} (${dbCategory})`);
+          return conflictKeyword;
+        }
+        
+        throw insertError;
+      }
       
-      // Update local state
-      setKeywords(prev => [...prev, data]);
+      // Update local state with the new keyword
+      setKeywords(prev => [...prev, newKeyword]);
       
       // Clear cache as we've added a new keyword
       searchCache.current = {};
       
-      return data;
+      console.log(`Created new keyword: ${trimmed} (${dbCategory})`);
+      return newKeyword;
     } catch (err) {
-      console.error('Error creating keyword:', err);
+      console.error(`Error creating keyword ${trimmed}:`, err);
       throw err;
     }
   };
