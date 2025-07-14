@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { parseResumeWithAffinda, ParsedResumeData } from '@/services/affinda';
+import { parseResumeWithAffinda } from '@/services/affinda';
+import { mapAffindaResponseToAppData, ParsedResumeData } from '@/services/affinda';
 
 export function useAffindaResumeParser() {
   const [parsing, setParsing] = useState(false);
@@ -15,7 +16,12 @@ export function useAffindaResumeParser() {
       setParsing(true);
       console.log('Processing resume with Affinda:', file.name);
 
-      const parsedData = await parseResumeWithAffinda(file);
+      // First get raw data from Affinda API
+      const rawAffindaData = await parseResumeWithAffinda(file);
+      console.log('Received raw Affinda data:', rawAffindaData);
+      
+      // Then map it to our application's data structure
+      const parsedData = mapAffindaResponseToAppData(rawAffindaData);
       
       // Validate that we have valid data
       const hasValidData = parsedData?.contractor && 

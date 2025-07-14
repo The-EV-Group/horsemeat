@@ -1,6 +1,10 @@
 import { AffindaAPI, AffindaCredential } from '@affinda/affinda';
-import { ParsedResumeData } from './affindaTypes';
-import { mapAffindaResponseToAppData } from './affindaMappers';
+import { AffindaResumeData, AffindaResponse } from './affindaTypes';
+
+// Type to match the actual structure returned by Affinda SDK
+type AffindaSDKResponse = {
+  data: Record<string, any>;
+};
 
 // Get API key, workspace ID, and document type ID from environment variables
 const AFFINDA_API_KEY = import.meta.env.VITE_AFFINDA_KEY;
@@ -27,7 +31,7 @@ const client = new AffindaAPI(credential);
 /**
  * Parse a resume file using Affinda API
  */
-export const parseResumeWithAffinda = async (file: File): Promise<ParsedResumeData> => {
+export const parseResumeWithAffinda = async (file: File): Promise<AffindaResumeData> => {
   try {
     // Check file size (Affinda has a 5MB limit)
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -40,18 +44,24 @@ export const parseResumeWithAffinda = async (file: File): Promise<ParsedResumeDa
       file,
       workspace: AFFINDA_WORKSPACE_ID,
       documentType: AFFINDA_DOCUMENT_TYPE_ID,
-    });
+    }) as AffindaSDKResponse;
 
     // Check if we have valid data
     if (!response.data) {
       throw new Error('No data returned from Affinda API');
     }
-
-    // Map Affinda response to our app's data structure
-    const parsedData = mapAffindaResponseToAppData(response.data);
-    return parsedData;
-  } catch (error) {
+    
+    // Convert the generic response to our expected format
+    const resumeData: AffindaResumeData = response.data as unknown as AffindaResumeData;    
+    return resumeData;
+  } catch (error: unknown) {
     console.error('Error parsing resume with Affinda:', error);
-    throw error;
+    
+    // Rethrow as a proper Error object
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error(typeof error === 'string' ? error : 'Unknown error parsing resume');
+    }
   }
 };

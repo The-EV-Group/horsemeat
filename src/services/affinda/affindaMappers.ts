@@ -3,7 +3,8 @@ import {
   AffindaResumeData, 
   ParsedResumeData, 
   ExtractedKeyword, 
-  ContractorData 
+  ContractorData,
+  AffindaLocationParsed
 } from './affindaTypes';
 
 /**
@@ -36,6 +37,40 @@ export function cleanKeywordName(text: string): string {
   return text.trim()
     .replace(/,$/, '') // Remove trailing comma
     .replace(/^\w/, c => c.toUpperCase()); // Capitalize first letter
+}
+
+/**
+ * Process location data from Affinda response
+ * @param contractor The contractor object to update
+ * @param locationData The location data from Affinda
+ */
+/**
+ * Clean phone numbers to just digits
+ * @param phoneNumber The phone number to clean
+ * @returns Phone number with only digits
+ */
+export function cleanPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return '';
+  
+  // Remove all non-digit characters
+  return phoneNumber.replace(/\D/g, '');
+}
+
+/**
+ * Clean street address to remove phone numbers
+ * @param streetAddress The address to clean
+ * @returns Cleaned street address
+ */
+export function cleanStreetAddress(streetAddress: string): string {
+  if (!streetAddress) return '';
+  
+  // Remove common phone number patterns (digits with optional formatting characters)
+  // This matches phone numbers like (123) 456-7890, 123-456-7890, +1 123 456 7890, etc.
+  return streetAddress
+    .replace(/\+?\d{1,3}?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g, '')
+    .replace(/\(\d+\)/, '') // Remove any remaining parenthesized numbers
+    .replace(/\s{2,}/g, ' ') // Replace multiple spaces with a single space
+    .trim();
 }
 
 /**
@@ -80,8 +115,11 @@ export function processLocationData(contractor: ContractorData, resumeLocation: 
     // Extract street address - try multiple approaches
     if (parsedLocation.street) {
       // Direct street field is available
-      contractor.street_address = parsedLocation.street.trim();
-      console.log('Using street field:', contractor.street_address);
+      // Clean the street field to remove potential phone numbers
+      let streetAddress = parsedLocation.street.trim();
+      streetAddress = cleanStreetAddress(streetAddress);
+      contractor.street_address = streetAddress;
+      console.log('Using street field (cleaned):', contractor.street_address);
     } else {
       // Build from components
       const addressParts = [];
@@ -195,10 +233,15 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
     if (resumeData.phoneNumber) {
       if (resumeData.phoneNumber.parsed && typeof resumeData.phoneNumber.parsed === 'object') {
         const parsedPhone = resumeData.phoneNumber.parsed;
-        contractor.phone = parsedPhone.formattedNumber || parsedPhone.nationalNumber;
-      } else {
-        contractor.phone = resumeData.phoneNumber.raw;
+        // Use nationalNumber if available, otherwise use formattedNumber or raw as fallback
+        const phoneString = String(parsedPhone.nationalNumber || parsedPhone.formattedNumber || resumeData.phoneNumber.raw || '');
+        // Strip all non-digit characters to get clean digits
+        contractor.phone = cleanPhoneNumber(phoneString);
+      } else if (resumeData.phoneNumber.raw) {
+        // Strip all non-digit characters from raw phone
+        contractor.phone = cleanPhoneNumber(String(resumeData.phoneNumber.raw));
       }
+      console.log('Extracted phone (digits only):', contractor.phone);
     }
     
     // Extract email
@@ -206,11 +249,22 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
       contractor.email = resumeData.email.raw;
     }
     
-    // Extract summary/professional summary
-    if (resumeData.summary) {
-      contractor.professional_summary = resumeData.summary.raw;
-    } else if (resumeData.goalsInterests) {
-      contractor.professional_summary = resumeData.goalsInterests.raw;
+    // Extract professional summary (maps to contractor.summary)
+    if (resumeData.summary && resumeData.summary.raw) {
+      contractor.summary = resumeData.summary.raw.trim();
+      console.log('Using summary for contractor.summary:', contractor.summary);
+    }
+    
+    // Extract goals/interests (maps to contractor.notes)
+    if (resumeData.goalsInterests && resumeData.goalsInterests.raw) {
+      contractor.notes = resumeData.goalsInterests.raw.trim();
+      console.log('Using goalsInterests for contractor.notes:', contractor.notes);
+      
+      // If no summary was found, also use goals as the summary
+      if (!contractor.summary) {
+        contractor.summary = resumeData.goalsInterests.raw.trim();
+        console.log('Using goalsInterests as fallback for contractor.summary');
+      }
     }
     
     // Extract skills
