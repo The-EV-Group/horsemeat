@@ -501,8 +501,57 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {renderEditableField('star_candidate', 'Star Candidate', localContractor.star_candidate, 'checkbox')}
             {renderEditableField('available', 'Available', localContractor.available, 'checkbox')}
+          </CardContent>
+        </Card>
+
+        {/* Internal Employees */}
+        <Card className="shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Assigned Employees
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {assigneesLoading ? (
+              <div className="flex items-center justify-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div>
+                {assignees && assignees.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {assignees.map(item => (
+                      <Badge key={item.internal_employee_id} variant="secondary" className="flex items-center gap-1 py-1.5 px-3">
+                        {item.employee?.full_name}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-4 w-4 rounded-full p-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={async () => {
+                            await unassignEmployeeFromContractor(contractorId, item.internal_employee_id);
+                          }}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground mb-4">No employees currently assigned</p>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowAssigneeDialog(true)}
+                  className="w-full"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Manage Assignments
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

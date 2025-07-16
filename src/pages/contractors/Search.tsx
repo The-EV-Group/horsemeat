@@ -113,24 +113,7 @@ export default function SearchContractors() {
           {loading ? "Loading..." : "List All Contractors"}
         </Button>
 
-        {contractors.length > 0 && (
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === "table" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-            >
-              Table
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-            >
-              List
-            </Button>
-          </div>
-        )}
+
       </div>
 
       {error && (
@@ -176,9 +159,7 @@ export default function SearchContractors() {
                           <h3 className="font-semibold text-lg">
                             {contractor.full_name}
                           </h3>
-                          {contractor.star_candidate && (
-                            <Star className="h-4 w-4 text-yellow-500" />
-                          )}
+
                           {contractor.matchPercentage !== undefined && (
                             <Badge variant="outline" className="ml-2">
                               {contractor.matchPercentage}% match
@@ -218,11 +199,7 @@ export default function SearchContractors() {
                           </Badge>
                         </div>
 
-                        {contractor.summary && (
-                          <p className="text-sm text-gray-700 line-clamp-2">
-                            {contractor.summary}
-                          </p>
-                        )}
+
                       </div>
 
                       <Button variant="outline" size="sm" className="ml-4">
@@ -255,9 +232,6 @@ export default function SearchContractors() {
                           <span className="font-medium">
                             {contractor.full_name}
                           </span>
-                          {contractor.star_candidate && (
-                            <Star className="h-4 w-4 text-yellow-500" />
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>
