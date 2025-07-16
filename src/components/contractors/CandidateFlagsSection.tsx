@@ -7,7 +7,7 @@ import type { ContractorFormData } from '@/lib/schemas/contractorSchema';
 
 interface CandidateFlagsSectionProps {
   watchedValues: ContractorFormData;
-  setValue: (name: keyof ContractorFormData, value: any) => void;
+  setValue: (name: keyof ContractorFormData, value: boolean | string) => void;
 }
 
 export function CandidateFlagsSection({ watchedValues, setValue }: CandidateFlagsSectionProps) {
@@ -18,18 +18,7 @@ export function CandidateFlagsSection({ watchedValues, setValue }: CandidateFlag
         <CardDescription>Key attributes and employment type</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="star_candidate"
-              checked={watchedValues.star_candidate}
-              onCheckedChange={(checked) => setValue('star_candidate', !!checked)}
-            />
-            <Label htmlFor="star_candidate" className="text-sm font-medium">
-              ⭐ Star Candidate
-            </Label>
-          </div>
-          
+        <div className="grid grid-cols-1 gap-6">
           <div className="flex items-center space-x-2">
             <Checkbox
               id="available"

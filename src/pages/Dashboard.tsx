@@ -56,12 +56,31 @@ export default function Dashboard() {
       setContractorsLoading(true);
       console.log('Fetching contractors for employee ID:', employee.id);
       
-      // Get contractors that belong to the current employee
+      // Get contractors assigned to the current employee through contractor_internal_link table
+      const { data: linkData, error: linkError } = await supabase
+        .from('contractor_internal_link')
+        .select('contractor_id')
+        .eq('internal_employee_id', employee.id);
+
+      console.log('Contractor link query result:', { linkData, linkError });
+
+      if (linkError) throw linkError;
+
+      if (!linkData || linkData.length === 0) {
+        console.log('No contractors found for this employee');
+        setContractors([]);
+        return;
+      }
+      
+      // Extract contractor IDs from the link table
+      const assignedContractorIds = linkData.map(link => link.contractor_id);
+      
+      // Get the actual contractor data
       const { data: contractorData, error: contractorError } = await supabase
         .from('contractor')
         .select('id, full_name')
-        .eq('owner_id', employee.id);
-
+        .in('id', assignedContractorIds);
+        
       console.log('Contractor query result:', { contractorData, contractorError });
 
       if (contractorError) throw contractorError;

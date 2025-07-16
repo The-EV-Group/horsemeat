@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      contractor_internal_link: {
+        Row: {
+          contractor_id: string
+          internal_employee_id: string
+          assigned_at: string
+        }
+        Insert: {
+          contractor_id: string
+          internal_employee_id: string
+          assigned_at?: string
+        }
+        Update: {
+          contractor_id?: string
+          internal_employee_id?: string
+          assigned_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_internal_link_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "contractor"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_internal_link_internal_employee_id_fkey"
+            columns: ["internal_employee_id"]
+            isOneToOne: false
+            referencedRelation: "internal_employee"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       contractor: {
         Row: {
           available: boolean | null
@@ -25,7 +58,6 @@ export type Database = {
           id: string
           inserted_at: string | null
           notes: string | null
-          owner_id: string | null
           pay_rate_upper: string | null
           pay_type: string | null
           phone: string | null
@@ -34,7 +66,6 @@ export type Database = {
           resume_url: string | null
           salary_higher: number | null
           salary_lower: number | null
-          star_candidate: boolean | null
           state: string | null
           street_address: string | null
           summary: string | null
@@ -52,7 +83,7 @@ export type Database = {
           id?: string
           inserted_at?: string | null
           notes?: string | null
-          owner_id?: string | null
+
           pay_rate_upper?: string | null
           pay_type?: string | null
           phone?: string | null
@@ -61,7 +92,7 @@ export type Database = {
           resume_url?: string | null
           salary_higher?: number | null
           salary_lower?: number | null
-          star_candidate?: boolean | null
+
           state?: string | null
           street_address?: string | null
           summary?: string | null
@@ -79,7 +110,7 @@ export type Database = {
           id?: string
           inserted_at?: string | null
           notes?: string | null
-          owner_id?: string | null
+
           pay_rate_upper?: string | null
           pay_type?: string | null
           phone?: string | null
@@ -88,7 +119,7 @@ export type Database = {
           resume_url?: string | null
           salary_higher?: number | null
           salary_lower?: number | null
-          star_candidate?: boolean | null
+
           state?: string | null
           street_address?: string | null
           summary?: string | null
@@ -96,15 +127,7 @@ export type Database = {
           zip_code?: string | null
           travel_radius_miles?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "contractor_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "internal_employee"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       contractor_history: {
         Row: {

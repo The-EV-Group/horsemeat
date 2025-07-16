@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,10 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags, Upload } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags, Upload, Plus, UserPlus, Check } from 'lucide-react';
 import { US_STATES } from '@/lib/schemas/contractorSchema';
 import { useContractorData } from '@/hooks/contractors/useContractorData';
 import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
+import { useContractorAssignments } from '@/hooks/contractors/useContractorAssignments';
 import { ContractorHistory } from './ContractorHistory';
 import { ContractorTasks } from './ContractorTasks';
 import { ProfileKeywordsSection } from './ProfileKeywordsSection';
@@ -57,32 +59,38 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
   const [editValue, setEditValue] = useState<string | number | boolean | null>('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showResumeUploadDialog, setShowResumeUploadDialog] = useState(false);
+  const [showAssigneeDialog, setShowAssigneeDialog] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [ownerEmployee, setOwnerEmployee] = useState<{ full_name: string } | null>(null);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [allEmployees, setAllEmployees] = useState<Tables<'internal_employee'>[]>([]);
+  
+  // Use the contractor assignments hook
+  const { 
+    assignees, 
+    loading: assigneesLoading, 
+    assignEmployeeToContractor,
+    unassignEmployeeFromContractor
+  } = useContractorAssignments(contractorId);
+  
+  // Fetch all employees for assignment
+  useEffect(() => {
+    const fetchAllEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('internal_employee')
+          .select('*')
+          .order('full_name');
 
-  // Fetch owner employee info
-  React.useEffect(() => {
-    const fetchOwnerEmployee = async () => {
-      if (localContractor?.owner_id) {
-        try {
-          const { data, error } = await supabase
-            .from('internal_employee')
-            .select('full_name')
-            .eq('id', localContractor.owner_id)
-            .single();
-
-          if (error) throw error;
-          setOwnerEmployee(data);
-        } catch (error) {
-          console.error('Error fetching owner employee:', error);
-        }
+        if (error) throw error;
+        setAllEmployees(data || []);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
       }
     };
 
-    fetchOwnerEmployee();
-  }, [localContractor?.owner_id]);
+    fetchAllEmployees();
+  }, []);
 
   if (dataLoading || !localContractor) {
     return (
@@ -258,63 +266,73 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
     }
   };
 
-  const renderEditableField = (field: string, label: string, value: string | number | boolean | null, type: 'text' | 'number' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' = 'text', options?: string[]) => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Label className="font-medium text-gray-700">{label}</Label>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleEdit(field, value)}
-          className="h-8 w-8 p-0 hover:bg-gray-100"
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
-      </div>
-      {editField === field ? (
-        <div className="space-y-3">
-          {type === 'textarea' ? (
-            <Textarea
-              value={editValue || ''}
-              onChange={(e) => setEditValue(e.target.value)}
-              rows={3}
-              className="resize-none"
-            />
-          ) : type === 'select' ? (
-            <Select value={editValue || ''} onValueChange={setEditValue}>
+  const renderEditableField = (field: string, label: string, value: string | number | boolean | null, type: 'text' | 'number' | 'email' | 'tel' | 'textarea' | 'select' | 'checkbox' = 'text', options?: string[]) => {
+    if (editField === field) {
+      return (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <Label>{label}</Label>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="h-7 px-2 text-xs" 
+                onClick={() => setEditField(null)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                variant="default" 
+                className="h-7 px-2 text-xs" 
+                onClick={handleSave} 
+                disabled={!canSave()}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+          
+          {type === 'select' && options && (
+            <Select 
+              value={typeof editValue === 'string' ? editValue : ''} 
+              onValueChange={(value: string) => setEditValue(value)}
+            >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select..." />
               </SelectTrigger>
               <SelectContent>
-                {options?.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
+                {options.map(option => (
+                  <SelectItem key={option} value={option}>{option}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          ) : type === 'checkbox' ? (
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                checked={editValue}
-                onCheckedChange={setEditValue}
-              />
-              <span className="text-sm">Yes</span>
-            </div>
-          ) : (
-            <Input
-              type={type}
-              value={editValue || ''}
-              onChange={(e) => setEditValue(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
+          )}
+          
+          {type === 'textarea' && (
+            <Textarea 
+              value={typeof editValue === 'string' ? editValue : ''}
+              onChange={(e) => setEditValue(e.target.value)}
               className="w-full"
             />
           )}
           
-          {/* Show validation message for travel_anywhere */}
-          {editField === 'travel_anywhere' && !editValue && (localContractor.travel_radius_miles === null || localContractor.travel_radius_miles === undefined) && (
-            <p className="text-sm text-red-600">
-              Please set a travel radius before unchecking "willing to travel anywhere"
-            </p>
+          {type === 'checkbox' && (
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                checked={typeof editValue === 'boolean' ? editValue : false} 
+                onCheckedChange={(checked: boolean) => setEditValue(checked)} 
+              />
+              <Label>{label}</Label>
+            </div>
+          )}
+          
+          {['text', 'number', 'email', 'tel'].includes(type) && (
+            <Input 
+              type={type} 
+              value={typeof editValue === 'string' || typeof editValue === 'number' ? editValue : ''}
+              onChange={(e) => setEditValue(type === 'number' ? parseFloat(e.target.value) : e.target.value)}
+            />
           )}
           
           {/* Show validation message for travel_radius_miles */}
@@ -324,7 +342,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             </p>
           )}
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-4">
             <Button 
               size="sm" 
               onClick={handleSave} 
@@ -337,17 +355,34 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             </Button>
           </div>
         </div>
-      ) : (
+      );
+    }
+    
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="font-medium text-gray-700">{label}</Label>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEdit(field, value)}
+            className="h-8 w-8 p-0 hover:bg-gray-100"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
         <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border text-sm">
           {type === 'checkbox' ? (
             <span>{value ? 'Yes' : 'No'}</span>
+          ) : value === null || value === '' ? (
+            <span className="text-gray-400 italic">Not provided</span>
           ) : (
-            <span>{value || <span className="text-gray-400 italic">Not provided</span>}</span>
+            <span>{String(value)}</span>
           )}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
   const handleKeywordsSave = async (newKeywords: typeof keywords) => {
     try {
@@ -370,19 +405,13 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{localContractor.full_name}</h1>
               <div className="flex items-center gap-3 mt-2">
-                {localContractor.star_candidate && (
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                    <Star className="w-3 h-3 mr-1" />
-                    Star Candidate
-                  </Badge>
-                )}
                 <Badge variant={localContractor.available ? 'default' : 'secondary'}>
                   {localContractor.available ? 'Available' : 'Unavailable'}
                 </Badge>
                 <Badge variant="outline">{localContractor.pay_type}</Badge>
-                {ownerEmployee && (
+                {assignees && assignees.length > 0 && (
                   <Badge variant="outline" className="bg-blue-50 text-blue-800">
-                    Owned by: {ownerEmployee.full_name}
+                    Assigned: {assignees.length}
                   </Badge>
                 )}
               </div>
@@ -610,6 +639,80 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={loading}>
               {loading ? 'Deleting...' : 'Delete Contractor'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Employee Assignments Dialog */}
+      <Dialog open={showAssigneeDialog} onOpenChange={setShowAssigneeDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Internal Employee Assignments</DialogTitle>
+            <DialogDescription>
+              Select which internal employees should be assigned to this contractor.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {assignees && (
+              <div className="mb-4">
+                <Label className="text-sm font-medium">Current Assignments</Label>
+                {assignees.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {assignees.map(item => (
+                      <Badge key={item.employee?.id} variant="secondary" className="gap-1">
+                        {item.employee?.full_name}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-4 w-4 rounded-full p-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={async () => {
+                            await unassignEmployeeFromContractor(contractorId, item.internal_employee_id);
+                          }}
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground mt-1">No employees currently assigned</div>
+                )}
+              </div>
+            )}
+            
+            <Label className="text-sm font-medium">Available Employees</Label>
+            <ScrollArea className="h-60 mt-2 border rounded-md p-2">
+              <div className="space-y-2">
+                {allEmployees
+                  .filter(employee => !assignees?.some(assignee => assignee.internal_employee_id === employee.id))
+                  .map(employee => (
+                    <div 
+                      key={employee.id} 
+                      className="flex items-center justify-between rounded-md p-2 hover:bg-muted cursor-pointer"
+                      onClick={async () => {
+                        await assignEmployeeToContractor(contractorId, employee.id);
+                      }}
+                    >
+                      <span>{employee.full_name}</span>
+                      <Button size="sm" variant="ghost" className="p-0 h-6 w-6">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                {allEmployees.filter(employee => !assignees?.some(assignee => assignee.internal_employee_id === employee.id)).length === 0 && (
+                  <div className="text-center py-4 text-sm text-muted-foreground">
+                    All employees are already assigned
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+          
+          <DialogFooter className="sm:justify-end">
+            <Button variant="outline" onClick={() => setShowAssigneeDialog(false)}>
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>

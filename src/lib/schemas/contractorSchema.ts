@@ -50,7 +50,6 @@ export const contractorSchema = z.object({
   }),
   
   // Flags
-  star_candidate: z.boolean(),
   available: z.boolean(),
   
   // Notes

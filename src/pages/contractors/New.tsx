@@ -49,7 +49,6 @@ export default function NewContractor() {
     resolver: zodResolver(contractorSchema),
     defaultValues: {
       available: true,
-      star_candidate: false,
       prefers_hourly: false,
       travel_anywhere: false,
       preferred_contact: "email",
@@ -75,8 +74,8 @@ export default function NewContractor() {
     "job titles": [],
   });
 
-  // Internal employee state
-  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  // Internal employees state
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
   // Resume upload hook and state
   const { resumeFile, uploadProgress, uploading, uploadedUrl, handleFileChange, removeFile, uploadFile } = useResumeUpload();
@@ -341,16 +340,32 @@ export default function NewContractor() {
           ? data.hourly_rate_upper?.toString() 
           : data.salary_higher?.toString(),
         available: data.available,
-        star_candidate: data.star_candidate,
         notes: data.notes,
         resume_url: resumeUrl,
         summary: data.candidate_summary,
-        owner_id: selectedEmployee, // Link to internal employee
       };
 
       // Create contractor - use type assertion to handle new fields
       const contractorId = await createContractor(contractorData as TablesInsert<"contractor">);
-
+      
+      // Create employee assignments if any are selected
+      if (selectedEmployees.length > 0) {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user) {
+          throw new Error("User authentication required");
+        }
+        
+        // Create all assignments in parallel
+        await Promise.all(selectedEmployees.map(async (employeeId) => {
+          await supabase
+            .from('contractor_internal_link')
+            .insert({
+              contractor_id: contractorId,
+              internal_employee_id: employeeId
+            });
+        }));
+      }
+      
       // Reset file state after successful upload
       removeFile();
 
@@ -420,8 +435,8 @@ export default function NewContractor() {
         />
 
         <InternalEmployeeSection
-          selectedEmployee={selectedEmployee}
-          onEmployeeChange={setSelectedEmployee}
+          selectedEmployees={selectedEmployees}
+          onEmployeesChange={setSelectedEmployees}
         />
 
         <LocationSection
