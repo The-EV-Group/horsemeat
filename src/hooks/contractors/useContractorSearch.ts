@@ -32,6 +32,30 @@ export function useContractorSearch() {
       setLoading(true);
       setError(null);
       console.log('Starting search with filters:', filters);
+      
+      // Check if any meaningful search criteria are provided
+      const hasSearchTerm = filters.searchTerm && filters.searchTerm.trim().length > 0;
+      const hasAvailableFilter = filters.available === true || filters.available === false;
+      const hasStarFilter = filters.starCandidate === true || filters.starCandidate === false;
+      const hasPayTypeFilter = filters.payType && filters.payType.trim().length > 0;
+      const hasStateFilter = filters.state && filters.state.trim().length > 0;
+      const hasCityFilter = filters.city && filters.city.trim().length > 0;
+      const hasKeywords = [
+        ...filters.skills,
+        ...filters.industries,
+        ...filters.companies,
+        ...filters.certifications,
+        ...filters.jobTitles
+      ].length > 0;
+      
+      // If no search criteria provided, return empty results
+      if (!hasSearchTerm && !hasAvailableFilter && !hasStarFilter && 
+          !hasPayTypeFilter && !hasStateFilter && !hasCityFilter && !hasKeywords) {
+        console.log('No search criteria provided');
+        setContractors([]);
+        setLoading(false);
+        return;
+      }
 
       let query = supabase
         .from('contractor')

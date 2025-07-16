@@ -15,7 +15,6 @@ import NewContractor from "./pages/contractors/New";
 import SearchContractors from "./pages/contractors/Search";
 import ContractorProfilePage from "./pages/contractors/Profile";
 import PotentialRecruits from "./pages/recruits/List";
-import AISearch from "./pages/AISearch";
 import ManageKeywords from "./pages/keywords/Manage";
 import Account from "./pages/Account";
 import NotFound from "./pages/NotFound";
@@ -85,16 +84,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/ai-search"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <AISearch />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="/keywords"
               element={

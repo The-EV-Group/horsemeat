@@ -1,21 +1,26 @@
-
-import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/auth/useAuth';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FormInput } from '@/components/shared/FormInput';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FormInput } from "@/components/shared/FormInput";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('signin');
-  
+  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("signin");
+
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
@@ -25,28 +30,28 @@ export default function Login() {
   }
 
   const isValidSignupEmail = (email: string) => {
-    return email.toLowerCase().endsWith('@theevgroup.com');
+    return email.toLowerCase().endsWith("@theevgroup.com");
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
+      setError("");
       const { error } = await signIn(email, password);
-      
+
       if (error) {
         setError(error.message);
       } else {
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -55,30 +60,30 @@ export default function Login() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
 
     if (!isValidSignupEmail(email)) {
-      setError('Sign up is restricted to @theevgroup.com email addresses');
+      setError("Sign up is restricted to @theevgroup.com email addresses");
       return;
     }
 
     try {
       setLoading(true);
-      setError('');
+      setError("");
       const { error } = await signUp(email, password, fullName);
-      
+
       if (error) {
         setError(error.message);
       } else {
-        setError('');
-        setActiveTab('signin');
-        setPassword('');
+        setError("");
+        setActiveTab("signin");
+        setPassword("");
         // Show success message or handle the flow
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
@@ -93,7 +98,9 @@ export default function Login() {
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">H++</span>
             </div>
-            <span className="text-2xl font-bold text-blue-600">Horsemeat++</span>
+            <span className="text-2xl font-bold text-blue-600">
+              Horsemeat++
+            </span>
           </div>
           <p className="text-gray-600">EV Group Contractor CRM</p>
         </div>
@@ -111,7 +118,7 @@ export default function Login() {
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="signin" className="space-y-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <FormInput
@@ -130,23 +137,23 @@ export default function Login() {
                     required
                     placeholder="Enter your password"
                   />
-                  
+
                   {error && (
                     <Alert variant="destructive">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
-                  
+
                   <Button
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={loading}
                   >
-                    {loading ? 'Signing in...' : 'Sign In'}
+                    {loading ? "Signing in..." : "Sign In"}
                   </Button>
                 </form>
               </TabsContent>
-              
+
               <TabsContent value="signup" className="space-y-4">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <FormInput
@@ -174,19 +181,19 @@ export default function Login() {
                     required
                     placeholder="Create a password"
                   />
-                  
+
                   {error && (
                     <Alert variant="destructive">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
                   )}
-                  
+
                   <Button
                     type="submit"
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     disabled={loading || (email && !isValidSignupEmail(email))}
                   >
-                    {loading ? 'Creating account...' : 'Create Account'}
+                    {loading ? "Creating account..." : "Create Account"}
                   </Button>
                 </form>
               </TabsContent>

@@ -22,7 +22,6 @@ const navigationItems = [
   { name: 'Add Contractor', href: '/contractors/new', icon: UserPlus },
   { name: 'Search Contractors', href: '/contractors/search', icon: Search },
   { name: 'Potential Recruits', href: '/recruits', icon: Users },
-  { name: 'Contractor AI Search', href: '/ai-search', icon: Bot },
   { name: 'Manage Keywords', href: '/keywords', icon: Tags },
   { name: 'My Profile', href: '/account', icon: User },
 ];
