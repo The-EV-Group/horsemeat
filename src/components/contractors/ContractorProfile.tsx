@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Edit, Trash2, Star, Phone, Mail, MapPin, User, DollarSign, FileText, X, Tags, Upload, Plus, UserPlus, Check } from 'lucide-react';
+import { BackButton } from '@/components/shared/BackButton';
 import { US_STATES } from '@/lib/schemas/contractorSchema';
 import { useContractorData } from '@/hooks/contractors/useContractorData';
 import { useContractorSearch } from '@/hooks/contractors/useContractorSearch';
@@ -64,15 +65,15 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [allEmployees, setAllEmployees] = useState<Tables<'internal_employee'>[]>([]);
-  
+
   // Use the contractor assignments hook
-  const { 
-    assignees, 
-    loading: assigneesLoading, 
+  const {
+    assignees,
+    loading: assigneesLoading,
     assignEmployeeToContractor,
     unassignEmployeeFromContractor
   } = useContractorAssignments(contractorId);
-  
+
   // Fetch all employees for assignment
   useEffect(() => {
     const fetchAllEmployees = async () => {
@@ -114,18 +115,18 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
       // If unchecking travel_anywhere, require travel_radius_miles
       return localContractor.travel_radius_miles !== null && localContractor.travel_radius_miles !== undefined;
     }
-    
+
     // Special validation for travel_radius_miles when travel_anywhere is false
     if (editField === 'travel_radius_miles' && !localContractor.travel_anywhere) {
       return editValue !== null && editValue !== undefined && editValue !== '';
     }
-    
+
     return true;
   };
 
   const handleSave = async () => {
     if (!editField || !canSave()) return;
-    
+
     try {
       setLoading(true);
       await updateContractor({ [editField]: editValue });
@@ -148,19 +149,19 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
     try {
       setLoading(true);
       console.log('Attempting to delete contractor:', localContractor.id);
-      
+
       await deleteContractor(localContractor.id);
-      
+
       console.log('Contractor deleted successfully');
-      
+
       toast.success('Contractor deleted successfully');
-      
+
       // Close the dialog first
       setShowDeleteDialog(false);
-      
+
       // Use our handleClose method to ensure proper navigation
       handleClose();
-      
+
     } catch (error) {
       console.error('Error deleting contractor:', error);
       toast.error('Failed to delete contractor');
@@ -177,22 +178,22 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
         const urlParts = localContractor.resume_url.split('/');
         const filePathWithQuery = urlParts[urlParts.length - 1];
         const filePath = filePathWithQuery.split('?')[0];
-        
+
         // Generate a new signed URL that's valid for 30 minutes
         const { data, error } = await supabase.storage
           .from('resumes')
           .createSignedUrl(filePath, 60 * 30); // 30 minutes
-        
+
         if (error || !data) {
           throw new Error('Failed to generate signed URL');
         }
-        
+
         // Open the new signed URL
         window.open(data.signedUrl, '_blank');
       } catch (error) {
         console.error('Error generating signed URL:', error);
         toast.error('Failed to open resume. Please try again.');
-        
+
         // Fallback to the stored URL if we can't generate a new one
         window.open(localContractor.resume_url, '_blank');
       }
@@ -243,12 +244,12 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
   const handleResumeDelete = async () => {
     try {
       setLoading(true);
-      
+
       // Delete from storage if exists
       if (localContractor.resume_url) {
         const urlParts = localContractor.resume_url.split('/');
         const fileName = urlParts[urlParts.length - 1];
-        
+
         await supabase.storage
           .from('resumes')
           .remove([fileName]);
@@ -273,29 +274,29 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
           <div className="flex items-center justify-between mb-1">
             <Label>{label}</Label>
             <div className="flex gap-2">
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-7 px-2 text-xs" 
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
                 onClick={() => setEditField(null)}
               >
                 Cancel
               </Button>
-              <Button 
-                size="sm" 
-                variant="default" 
-                className="h-7 px-2 text-xs" 
-                onClick={handleSave} 
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 px-2 text-xs"
+                onClick={handleSave}
                 disabled={!canSave()}
               >
                 Save
               </Button>
             </div>
           </div>
-          
+
           {type === 'select' && options && (
-            <Select 
-              value={typeof editValue === 'string' ? editValue : ''} 
+            <Select
+              value={typeof editValue === 'string' ? editValue : ''}
               onValueChange={(value: string) => setEditValue(value)}
             >
               <SelectTrigger>
@@ -308,44 +309,44 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
               </SelectContent>
             </Select>
           )}
-          
+
           {type === 'textarea' && (
-            <Textarea 
+            <Textarea
               value={typeof editValue === 'string' ? editValue : ''}
               onChange={(e) => setEditValue(e.target.value)}
               className="w-full"
             />
           )}
-          
+
           {type === 'checkbox' && (
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                checked={typeof editValue === 'boolean' ? editValue : false} 
-                onCheckedChange={(checked: boolean) => setEditValue(checked)} 
+              <Checkbox
+                checked={typeof editValue === 'boolean' ? editValue : false}
+                onCheckedChange={(checked: boolean) => setEditValue(checked)}
               />
               <Label>{label}</Label>
             </div>
           )}
-          
+
           {['text', 'number', 'email', 'tel'].includes(type) && (
-            <Input 
-              type={type} 
+            <Input
+              type={type}
               value={typeof editValue === 'string' || typeof editValue === 'number' ? editValue : ''}
               onChange={(e) => setEditValue(type === 'number' ? parseFloat(e.target.value) : e.target.value)}
             />
           )}
-          
+
           {/* Show validation message for travel_radius_miles */}
           {editField === 'travel_radius_miles' && !localContractor.travel_anywhere && (editValue === null || editValue === undefined || editValue === '') && (
             <p className="text-sm text-red-600">
               Travel radius is required when not willing to travel anywhere
             </p>
           )}
-          
+
           <div className="flex gap-2 mt-4">
-            <Button 
-              size="sm" 
-              onClick={handleSave} 
+            <Button
+              size="sm"
+              onClick={handleSave}
               disabled={loading || !canSave()}
             >
               Save
@@ -357,7 +358,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
         </div>
       );
     }
-    
+
     return (
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -395,6 +396,15 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      {/* Back Button */}
+      <div className="flex items-center">
+        <BackButton
+          onBack={handleClose}
+          returnToPath={returnToPath}
+          className="flex items-center gap-2"
+        />
+      </div>
+
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <div className="flex items-center justify-between">
@@ -417,10 +427,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
               </div>
             </div>
           </div>
-          <Button variant="outline" onClick={handleClose}>
-            <X className="mr-2 h-4 w-4" />
-            Close
-          </Button>
+          {/* Close button removed in favor of back button */}
         </div>
       </div>
 
@@ -525,9 +532,9 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
                     {assignees.map(item => (
                       <Badge key={item.internal_employee_id} variant="secondary" className="flex items-center gap-1 py-1.5 px-3">
                         {item.employee?.full_name}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-4 w-4 rounded-full p-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
                           onClick={async () => {
                             await unassignEmployeeFromContractor(contractorId, item.internal_employee_id);
@@ -541,9 +548,9 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
                 ) : (
                   <p className="text-sm text-muted-foreground mb-4">No employees currently assigned</p>
                 )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowAssigneeDialog(true)}
                   className="w-full"
                 >
@@ -566,7 +573,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
           <CardContent className="space-y-6">
             {renderEditableField('notes', 'Goals / Interests', localContractor.notes, 'textarea')}
             {renderEditableField('summary', 'Candidate Summary', localContractor.summary, 'textarea')}
-            
+
             {/* Resume Section */}
             <div className="space-y-2">
               <Label className="font-medium text-gray-700">Resume</Label>
@@ -599,7 +606,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
       </div>
 
       {/* Keywords Section */}
-      <ProfileKeywordsSection 
+      <ProfileKeywordsSection
         keywords={keywords}
         onSave={handleKeywordsSave}
       />
@@ -655,8 +662,8 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             />
             {uploadProgress > 0 && (
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300" 
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
@@ -702,7 +709,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
               Select which internal employees should be assigned to this contractor.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             {assignees && (
               <div className="mb-4">
@@ -712,9 +719,9 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
                     {assignees.map(item => (
                       <Badge key={item.employee?.id} variant="secondary" className="gap-1">
                         {item.employee?.full_name}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-4 w-4 rounded-full p-0 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
                           onClick={async () => {
                             await unassignEmployeeFromContractor(contractorId, item.internal_employee_id);
@@ -730,15 +737,15 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
                 )}
               </div>
             )}
-            
+
             <Label className="text-sm font-medium">Available Employees</Label>
             <ScrollArea className="h-60 mt-2 border rounded-md p-2">
               <div className="space-y-2">
                 {allEmployees
                   .filter(employee => !assignees?.some(assignee => assignee.internal_employee_id === employee.id))
                   .map(employee => (
-                    <div 
-                      key={employee.id} 
+                    <div
+                      key={employee.id}
                       className="flex items-center justify-between rounded-md p-2 hover:bg-muted cursor-pointer"
                       onClick={async () => {
                         await assignEmployeeToContractor(contractorId, employee.id);
@@ -758,7 +765,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
               </div>
             </ScrollArea>
           </div>
-          
+
           <DialogFooter className="sm:justify-end">
             <Button variant="outline" onClick={() => setShowAssigneeDialog(false)}>
               Done

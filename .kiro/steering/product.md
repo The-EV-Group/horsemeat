@@ -14,7 +14,6 @@ Horsemeat++ is a contractor relationship management (CRM) system built for EV Gr
 ## User Types
 
 - **Internal Employees**: Staff members who manage contractors and recruitment
-- **System Administrators**: Users with full access to manage keywords and system settings
 
 ## Key Workflows
 

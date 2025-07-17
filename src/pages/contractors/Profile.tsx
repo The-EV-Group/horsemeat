@@ -40,6 +40,7 @@ export default function ContractorProfilePage() {
     <ContractorProfile
       contractorId={id}
       onClose={handleClose}
+      returnToPath={returnToPath}
     />
   );
 }

@@ -10,20 +10,37 @@ import {
   User,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
-const navigationItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Add Contractor', href: '/contractors/new', icon: UserPlus },
-  { name: 'Search Contractors', href: '/contractors/search', icon: Search },
-  { name: 'Potential Recruits', href: '/recruits', icon: Users },
-  { name: 'Manage Keywords', href: '/keywords', icon: Tags },
-  { name: 'My Profile', href: '/account', icon: User },
+// Grouped navigation items with role-based access control
+const navigationGroups = [
+  {
+    label: "Main",
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['staff', 'admin'] },
+    ]
+  },
+  {
+    label: "Contractors",
+    items: [
+      { name: 'Add Contractor', href: '/contractors/new', icon: UserPlus, roles: ['staff', 'admin'] },
+      { name: 'Search Contractors', href: '/contractors/search', icon: Search, roles: ['staff', 'admin'] },
+      { name: 'Potential Recruits', href: '/recruits', icon: Users, roles: ['staff', 'admin'] },
+    ]
+  },
+  {
+    label: "System",
+    items: [
+      { name: 'Manage Keywords', href: '/keywords', icon: Tags, roles: ['staff', 'admin'] },
+      { name: 'My Profile', href: '/account', icon: User, roles: ['staff', 'admin'] },
+    ]
+  }
 ];
 
 export function Sidebar() {
@@ -47,25 +64,42 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
-        {navigationItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.href}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200',
-                'hover:bg-primary/10 hover:text-primary',
-                isActive
-                  ? 'bg-primary text-white shadow-soft'
-                  : 'text-gray-700'
-              )
-            }
-            onClick={() => setIsOpen(false)}
-          >
-            <item.icon className="mr-3 h-5 w-5" />
-            {item.name}
-          </NavLink>
+      <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
+        {navigationGroups.map((group) => (
+          <div key={group.label} className="space-y-2">
+            <h3 className="px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              {group.label}
+            </h3>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                // Check if user has permission to see this item
+                const userRole = employee?.role || 'staff';
+                const hasAccess = !item.roles || item.roles.includes(userRole);
+                
+                if (!hasAccess) return null;
+                
+                return (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200',
+                        'hover:bg-primary/10 hover:text-primary',
+                        isActive
+                          ? 'bg-primary text-white shadow-soft border-l-4 border-accent'
+                          : 'text-gray-700'
+                      )
+                    }
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <item.icon className="mr-3 h-5 w-5" />
+                    {item.name}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </nav>
 
