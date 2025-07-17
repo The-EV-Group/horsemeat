@@ -44,32 +44,78 @@ export function LinkedContractorsDialog({
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      console.log(`Fetching contractors linked to keyword: ${keyword.name} (${keyword.id})`);
+      
+      // First, get the count of linked contractors
+      const { count, error: countError } = await supabase
         .from('contractor_keyword')
-        .select(`
-          contractor_id,
-          contractor:contractor_id (
-            id,
-            full_name,
-            email,
-            city,
-            state
-          )
-        `)
+        .select('*', { count: 'exact', head: true })
         .eq('keyword_id', keyword.id);
+        
+      if (countError) {
+        console.error('Error counting linked contractors:', countError);
+      } else {
+        console.log(`Found ${count} linked contractors for keyword ${keyword.name}`);
+      }
+      
+      // Get all linked contractors in batches to handle large numbers
+      const batchSize = 100;
+      let allContractors: LinkedContractor[] = [];
+      let hasMore = true;
+      let page = 0;
+      
+      while (hasMore) {
+        // Get a batch of contractors
+        const { data, error } = await supabase
+          .from('contractor_keyword')
+          .select(`
+            contractor_id,
+            contractor:contractor_id (
+              id,
+              full_name,
+              email,
+              city,
+              state
+            )
+          `)
+          .eq('keyword_id', keyword.id)
+          .range(page * batchSize, (page + 1) * batchSize - 1);
+          
+        if (error) {
+          console.error(`Error fetching contractors batch ${page}:`, error);
+          break;
+        }
+        
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          // Filter out any items with missing contractor data
+          const validData = data.filter(item => item.contractor && item.contractor.id);
+          
+          const contractors = validData.map(item => ({
+            id: item.contractor.id,
+            full_name: item.contractor.full_name,
+            email: item.contractor.email,
+            city: item.contractor.city,
+            state: item.contractor.state,
+            link_id: `${item.contractor_id}-${keyword.id}`
+          }));
+          
+          allContractors = [...allContractors, ...contractors];
+          
+          // Check if we need to fetch more
+          if (data.length < batchSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+          
+          console.log(`Fetched batch ${page}, got ${contractors.length} contractors, total so far: ${allContractors.length}`);
+        }
+      }
 
-      if (error) throw error;
-
-      const contractors = data?.map(item => ({
-        id: item.contractor.id,
-        full_name: item.contractor.full_name,
-        email: item.contractor.email,
-        city: item.contractor.city,
-        state: item.contractor.state,
-        link_id: `${item.contractor_id}-${keyword.id}`
-      })) || [];
-
-      setLinkedContractors(contractors);
+      console.log(`Processed ${allContractors.length} linked contractors`);
+      setLinkedContractors(allContractors);
     } catch (error) {
       console.error('Error fetching linked contractors:', error);
       toast({

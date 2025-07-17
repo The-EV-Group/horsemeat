@@ -55,34 +55,60 @@ export function useContractorSearch() {
         return;
       }
 
+      // Determine if we need to use a more complex query with keyword filtering
+      if (hasKeywords) {
+        await searchWithKeywords(filters);
+      } else {
+        await searchWithoutKeywords(filters);
+      }
+    } catch (err) {
+      console.error('Search error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setContractors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  /**
+   * Search for contractors without keyword filtering
+   */
+  const searchWithoutKeywords = async (filters: SearchFilters) => {
+    try {
       let query = supabase
         .from('contractor')
         .select('*')
         .order('inserted_at', { ascending: false });
 
-      // Apply text search
+      // Apply text search across multiple fields
       if (filters.searchTerm && filters.searchTerm.trim()) {
-        query = query.or(`full_name.ilike.%${filters.searchTerm}%,email.ilike.%${filters.searchTerm}%,phone.ilike.%${filters.searchTerm}%`);
+        const searchTerm = filters.searchTerm.trim();
+        
+        // Search across multiple fields with OR conditions
+        query = query.or(
+          `full_name.ilike.%${searchTerm}%,` +
+          `email.ilike.%${searchTerm}%,` +
+          `phone.ilike.%${searchTerm}%,` +
+          `summary.ilike.%${searchTerm}%,` +
+          `notes.ilike.%${searchTerm}%`
+        );
       }
 
-      // Apply boolean filters - only if they are explicitly set (not null/undefined)
+      // Apply boolean filters
       if (filters.available === true || filters.available === false) {
         query = query.eq('available', filters.available);
       }
-
-      // Removed star_candidate filter as part of multi-assignee model refactoring
 
       // Apply pay type filter
       if (filters.payType && filters.payType.trim()) {
         query = query.eq('pay_type', filters.payType);
       }
 
-      // Apply state filter
+      // Apply location filters
       if (filters.state && filters.state.trim()) {
         query = query.eq('state', filters.state);
       }
 
-      // Apply city filter
       if (filters.city && filters.city.trim()) {
         query = query.eq('city', filters.city);
       }
@@ -95,60 +121,120 @@ export function useContractorSearch() {
       }
 
       console.log('Query returned:', data?.length, 'contractors');
-
-      // Calculate match percentage and filter by keywords
-      const allKeywords = [
+      setContractors(data || []);
+    } catch (error) {
+      console.error('Error in searchWithoutKeywords:', error);
+      throw error;
+    }
+  };
+  
+  /**
+   * Search for contractors with keyword filtering - optimized for large datasets
+   */
+  const searchWithKeywords = async (filters: SearchFilters) => {
+    try {
+      // Get all keyword IDs from the filters
+      const keywordIds = [
         ...filters.skills.map(k => k.id),
         ...filters.industries.map(k => k.id),
         ...filters.companies.map(k => k.id),
         ...filters.certifications.map(k => k.id),
         ...filters.jobTitles.map(k => k.id)
       ];
-
-      if (allKeywords.length > 0) {
-        // Get all contractor keywords
-        const { data: contractorKeywords, error: keywordError } = await supabase
-          .from('contractor_keyword')
-          .select('contractor_id, keyword_id');
-
-        if (keywordError) {
-          console.error('Error fetching contractor keywords:', keywordError);
-          throw keywordError;
-        }
-
-        // Calculate match percentages
-        const contractorsWithMatches = data?.map(contractor => {
-          const contractorKeywordIds = contractorKeywords
-            ?.filter(ck => ck.contractor_id === contractor.id)
-            .map(ck => ck.keyword_id) || [];
-          
-          const matchingKeywords = allKeywords.filter(keywordId => 
-            contractorKeywordIds.includes(keywordId)
-          );
-          
-          const matchPercentage = Math.round((matchingKeywords.length / allKeywords.length) * 100);
-          
-          return {
-            ...contractor,
-            matchPercentage
-          };
-        }).filter(contractor => contractor.matchPercentage > 0) || [];
-
-        // Sort by match percentage (highest first)
-        contractorsWithMatches.sort((a, b) => (b.matchPercentage || 0) - (a.matchPercentage || 0));
-        console.log('Contractors with match percentages:', contractorsWithMatches.length);
-
-        setContractors(contractorsWithMatches);
-      } else {
-        console.log('No keywords selected, returning all matching contractors');
-        setContractors(data || []);
+      
+      console.log(`Searching with ${keywordIds.length} keywords`);
+      
+      // Use a more efficient approach with a single query that joins contractors and keywords
+      // This avoids loading all contractor-keyword relationships into memory
+      let query = supabase
+        .from('contractor')
+        .select(`
+          *,
+          contractor_keyword!inner(keyword_id)
+        `)
+        .in('contractor_keyword.keyword_id', keywordIds)
+        .order('inserted_at', { ascending: false });
+      
+      // Apply text search if provided
+      if (filters.searchTerm && filters.searchTerm.trim()) {
+        const searchTerm = filters.searchTerm.trim();
+        query = query.or(
+          `full_name.ilike.%${searchTerm}%,` +
+          `email.ilike.%${searchTerm}%,` +
+          `phone.ilike.%${searchTerm}%,` +
+          `summary.ilike.%${searchTerm}%,` +
+          `notes.ilike.%${searchTerm}%`
+        );
       }
-    } catch (err) {
-      console.error('Search error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      setContractors([]);
-    } finally {
-      setLoading(false);
+
+      // Apply boolean filters
+      if (filters.available === true || filters.available === false) {
+        query = query.eq('available', filters.available);
+      }
+
+      // Apply pay type filter
+      if (filters.payType && filters.payType.trim()) {
+        query = query.eq('pay_type', filters.payType);
+      }
+
+      // Apply location filters
+      if (filters.state && filters.state.trim()) {
+        query = query.eq('state', filters.state);
+      }
+
+      if (filters.city && filters.city.trim()) {
+        query = query.eq('city', filters.city);
+      }
+
+      // Execute the query
+      const { data: contractorsWithKeywords, error } = await query;
+      
+      if (error) {
+        console.error('Error in contractor search query:', error);
+        throw error;
+      }
+      
+      if (!contractorsWithKeywords || contractorsWithKeywords.length === 0) {
+        console.log('No contractors match the filters');
+        setContractors([]);
+        return;
+      }
+      
+      console.log(`Found ${contractorsWithKeywords.length} contractors with at least one matching keyword`);
+      
+      // Group contractors by ID to remove duplicates and count matching keywords
+      const contractorMap: Record<string, any> = {};
+      contractorsWithKeywords.forEach(contractor => {
+        if (!contractorMap[contractor.id]) {
+          contractorMap[contractor.id] = {
+            ...contractor,
+            matchingKeywordCount: 1
+          };
+        } else {
+          contractorMap[contractor.id].matchingKeywordCount++;
+        }
+      });
+      
+      // Convert to array and calculate match percentages
+      const contractorsWithScores = Object.values(contractorMap).map(contractor => {
+        const matchPercentage = keywordIds.length > 0
+          ? Math.round((contractor.matchingKeywordCount / keywordIds.length) * 100)
+          : 0;
+        
+        return {
+          ...contractor,
+          matchPercentage
+        };
+      });
+      
+      // Sort by match percentage (highest first)
+      contractorsWithScores.sort((a, b) => (b.matchPercentage || 0) - (a.matchPercentage || 0));
+      
+      console.log('Final result:', contractorsWithScores.length, 'contractors with match scores');
+      setContractors(contractorsWithScores);
+    } catch (error) {
+      console.error('Error in searchWithKeywords:', error);
+      throw error;
     }
   };
 

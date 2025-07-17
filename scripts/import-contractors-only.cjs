@@ -1,21 +1,72 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
-import { parseAddress } from './addressParser';
-import { parsePayInfo } from './payInfoParser';
-import { parseTravelPreferences } from './travelParser';
-import { processResume } from './resumeProcessor';
-import { processKeywords } from './keywordProcessor';
+#!/usr/bin/env node
 
-export interface ImportResult {
-  success: number;
-  failed: number;
-  errors: { contractor: string; error: string }[];
-  processedContractors: string[];
+// This script imports only contractor data without keywords
+console.log('Starting contractor-only import script...');
+
+// Load environment variables from .env file
+require('dotenv').config();
+
+// Use CommonJS require for Node.js script
+require('esbuild-register');
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+const options = {
+  limit: 0,
+  batchSize: 5,
+  test: false
+};
+
+// Process arguments
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i].toLowerCase();
+  
+  if (arg === '--limit' && i + 1 < args.length) {
+    options.limit = parseInt(args[i + 1], 10);
+    i++;
+  } else if (arg === '--batch' && i + 1 < args.length) {
+    options.batchSize = parseInt(args[i + 1], 10);
+    i++;
+  } else if (arg === '--test') {
+    options.test = true;
+    if (!options.limit) options.limit = 3; // Default test limit
+  } else if (arg === '--help' || arg === '-h') {
+    console.log(`
+Usage: node scripts/import-contractors-only.cjs [options]
+
+Options:
+  --limit N       Limit import to N contractors
+  --batch N       Process contractors in batches of N (default: 5)
+  --test          Run in test mode (imports 3 contractors)
+  --help, -h      Show this help message
+`);
+    process.exit(0);
+  }
 }
 
-/**
- * Imports a single contractor from the source data
- */
-export async function importContractor(sourceContractor: any): Promise<string> {
+// Set environment variables for Supabase
+process.env.VITE_SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://rvpipfohtzpftehwrake.supabase.co';
+process.env.VITE_SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2cGlwZm9odHpwZnRlaHdyYWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE4MjYzMDYsImV4cCI6MjA2NzQwMjMwNn0.6Xdivl91QgaQwzSwe_j2bWSFDfufrHUNSZ9rf80-XHA';
+
+// Use service role key for admin operations if available
+if (process.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+  console.log('Service role key found. Using elevated permissions for import.');
+} else {
+  console.warn('No service role key found. Import may fail due to permission issues.');
+  console.warn('Add VITE_SUPABASE_SERVICE_ROLE_KEY to your .env file for proper permissions.');
+}
+
+// Import the necessary functions
+const { supabase, supabaseAdmin } = require('../src/lib/supabase');
+const { parseAddress } = require('../src/utils/import/addressParser');
+const { parsePayInfo } = require('../src/utils/import/payInfoParser');
+const { parseTravelPreferences } = require('../src/utils/import/travelParser');
+const { processResume } = require('../src/utils/import/resumeProcessor');
+const fs = require('fs');
+const path = require('path');
+
+// Function to import a single contractor without keywords
+async function importContractorOnly(sourceContractor) {
   try {
     console.log(`\nProcessing contractor: ${sourceContractor.full_name || 'Unknown'}`);
     
@@ -92,7 +143,7 @@ export async function importContractor(sourceContractor: any): Promise<string> {
       state: addressInfo.state,
       zip_code: addressInfo.zip_code,
       country: addressInfo.country,
-      preferred_contact: preferredContact as 'email' | 'phone' | 'text',
+      preferred_contact: preferredContact,
       summary: sourceContractor.candidate_summary,
       hourly_rate: payInfo.hourly_rate,
       salary_lower: payInfo.salary_lower,
@@ -101,7 +152,6 @@ export async function importContractor(sourceContractor: any): Promise<string> {
       pay_type: sourceContractor.tax_form_type,
       prefers_hourly: payInfo.prefers_hourly,
       available: true, // Default to available
-      // Removed star_candidate field as it's no longer in the schema
       travel_anywhere: travelInfo.travel_anywhere,
       travel_radius_miles: travelInfo.travel_radius_miles,
       resume_url: resumeUrl,
@@ -122,69 +172,8 @@ export async function importContractor(sourceContractor: any): Promise<string> {
     
     if (contractorError) throw contractorError;
     
-    // 8. Process keywords
-    const keywordIds = await processKeywords(sourceContractor);
-    
-    // 9. Create contractor-keyword relationships
-    if (keywordIds.length > 0) {
-      console.log(`Creating ${keywordIds.length} keyword relationships for ${sourceContractor.full_name}`);
-      
-      // Create a Set to track unique keyword IDs (avoid duplicates)
-      const uniqueKeywordIds = [...new Set(keywordIds)];
-      
-      if (uniqueKeywordIds.length !== keywordIds.length) {
-        console.log(`Removed ${keywordIds.length - uniqueKeywordIds.length} duplicate keyword IDs`);
-      }
-      
-      // Check if any relationships already exist
-      const { data: existingLinks, error: checkError } = await client
-        .from('contractor_keyword')
-        .select('keyword_id')
-        .eq('contractor_id', contractor.id);
-      
-      if (checkError) {
-        console.error(`Error checking existing keyword links for ${sourceContractor.full_name}:`, checkError);
-      }
-      
-      // Filter out keywords that are already linked to this contractor
-      const existingKeywordIds = new Set(existingLinks?.map(link => link.keyword_id) || []);
-      const newKeywordIds = uniqueKeywordIds.filter(id => !existingKeywordIds.has(id));
-      
-      if (newKeywordIds.length === 0) {
-        console.log(`All keywords are already linked to contractor ${sourceContractor.full_name}`);
-        return contractor.id;
-      }
-      
-      console.log(`Adding ${newKeywordIds.length} new keyword links for ${sourceContractor.full_name}`);
-      
-      // Create the links for new keywords
-      const keywordLinks = newKeywordIds.map(keywordId => ({
-        contractor_id: contractor.id,
-        keyword_id: keywordId
-      }));
-      
-      // Insert the links in smaller batches to avoid potential issues
-      const BATCH_SIZE = 50;
-      for (let i = 0; i < keywordLinks.length; i += BATCH_SIZE) {
-        const batch = keywordLinks.slice(i, i + BATCH_SIZE);
-        
-        const { error: keywordError } = await client
-          .from('contractor_keyword')
-          .insert(batch);
-        
-        if (keywordError) {
-          console.error(`Error linking keywords batch ${i/BATCH_SIZE + 1} for ${sourceContractor.full_name}:`, keywordError);
-        } else {
-          console.log(`Successfully linked batch ${i/BATCH_SIZE + 1} of keywords for ${sourceContractor.full_name}`);
-        }
-      }
-    } else {
-      console.log(`No keywords to link for ${sourceContractor.full_name}`);
-    }
-    
-    // 10. Add import note to history
-    console.log('Step 10: Adding import note to history');
-    
+    // 8. Add import note to history
+    console.log('Step 8: Adding import note to history');
     const { error: historyError } = await client
       .from('contractor_history')
       .insert({
@@ -194,34 +183,30 @@ export async function importContractor(sourceContractor: any): Promise<string> {
     
     if (historyError) {
       console.warn(`Warning: Failed to add history note for ${sourceContractor.full_name}:`, historyError);
-      // Don't throw error here, as the contractor was successfully imported
     }
     
     console.log(`Successfully imported contractor: ${sourceContractor.full_name || 'Unknown'} (ID: ${contractor.id})`);
-    return contractor.id;
+    
+    // Return both the contractor ID and the source data for later keyword processing
+    return {
+      id: contractor.id,
+      sourceData: sourceContractor
+    };
   } catch (error) {
     console.error(`Error importing contractor ${sourceContractor.full_name || 'Unknown'}:`, error);
     throw error;
   }
 }
 
-/**
- * Imports contractors in batches
- */
-export async function importContractors(
-  contractors: any[],
-  batchSize = 10,
-  onProgress?: (current: number, total: number) => void
-): Promise<ImportResult> {
-  const result: ImportResult = {
+// Function to import contractors in batches
+async function importContractorsOnly(contractors, batchSize = 10, onProgress) {
+  const result = {
     success: 0,
     failed: 0,
     errors: [],
     processedContractors: []
   };
   
-  // Limit the number of contractors for testing if needed
-  // const limitedContractors = contractors.slice(0, 20); // Uncomment to limit
   const contractorsToProcess = contractors;
   
   console.log(`Starting import of ${contractorsToProcess.length} contractors in batches of ${batchSize}`);
@@ -235,9 +220,9 @@ export async function importContractors(
     const batchPromises = batch.map(async (sourceContractor) => {
       try {
         console.log(`  - Processing: ${sourceContractor.full_name || 'Unknown'}`);
-        const contractorId = await importContractor(sourceContractor);
+        const contractorResult = await importContractorOnly(sourceContractor);
         result.success++;
-        result.processedContractors.push(contractorId);
+        result.processedContractors.push(contractorResult);
         console.log(`  ✓ Success: ${sourceContractor.full_name || 'Unknown'}`);
         return { success: true, contractor: sourceContractor.full_name || 'Unknown' };
       } catch (error) {
@@ -262,5 +247,101 @@ export async function importContractors(
     console.log(`Batch complete. Progress: ${i + batch.length}/${contractorsToProcess.length} (${Math.round(((i + batch.length) / contractorsToProcess.length) * 100)}%)`);
   }
   
+  // Save the processed contractors to a file for later keyword processing
+  const outputFile = path.resolve(process.cwd(), 'imported_contractors.json');
+  fs.writeFileSync(outputFile, JSON.stringify(result.processedContractors, null, 2));
+  console.log(`Saved imported contractor data to ${outputFile} for keyword processing`);
+  
   return result;
 }
+
+// Main function to run the import
+async function runImport(options) {
+  try {
+    console.log('Starting contractor-only import process...');
+    
+    // Read the JSON file
+    let filePath = '';
+    const possiblePaths = [
+      path.resolve(process.cwd(), 'contractors_supabase.json'),
+      path.resolve(process.cwd(), '../contractors_supabase.json'),
+      path.resolve(process.cwd(), '../../contractors_supabase.json')
+    ];
+    
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        filePath = possiblePath;
+        break;
+      }
+    }
+    
+    if (!filePath) {
+      throw new Error('Could not find contractors_supabase.json file');
+    }
+    
+    console.log(`Reading file from: ${filePath}`);
+    
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    let contractors = JSON.parse(fileContent);
+    
+    console.log(`Found ${contractors.length} contractors in file`);
+    
+    // Apply limit if specified
+    if (options.limit && options.limit > 0 && options.limit < contractors.length) {
+      console.log(`Limiting import to ${options.limit} contractors for testing`);
+      contractors = contractors.slice(0, options.limit);
+    }
+    
+    // Run the import with progress reporting
+    const result = await importContractorsOnly(
+      contractors,
+      options.batchSize || 5,
+      (current, total) => {
+        console.log(`Progress: ${current}/${total} (${Math.round((current / total) * 100)}%)`);
+      }
+    );
+    
+    // Log the results
+    console.log('\nImport completed!');
+    console.log(`Successfully imported: ${result.success}`);
+    console.log(`Failed imports: ${result.failed}`);
+    
+    if (result.errors.length > 0) {
+      console.log('\nErrors:');
+      result.errors.forEach(error => {
+        console.log(`- ${error.contractor}: ${error.error}`);
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error running import:', error);
+    throw error;
+  }
+}
+
+console.log('Running import process...');
+console.log(`Options: ${JSON.stringify(options)}`);
+
+// Run the import
+runImport(options)
+  .then(result => {
+    console.log(`Import completed with ${result.success} successful imports and ${result.failed} failures.`);
+    
+    if (result.errors.length > 0) {
+      console.log('\nSummary of errors:');
+      console.log(`${result.errors.length} contractors failed to import.`);
+      
+      // Show detailed errors
+      console.log('\nDetailed errors:');
+      result.errors.forEach((error, index) => {
+        console.log(`${index + 1}. ${error.contractor}: ${error.error}`);
+      });
+    }
+    
+    process.exit(0);
+  })
+  .catch(error => {
+    console.error('Import process failed:', error);
+    process.exit(1);
+  });

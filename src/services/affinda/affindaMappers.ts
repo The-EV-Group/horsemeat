@@ -16,45 +16,152 @@ import {
 export function splitKeywords(text: string, type: string): ExtractedKeyword[] {
   if (!text) return [];
   
+  // Normalize the text first
+  const normalizedText = text.trim();
+  
+  // Define common phrases that should be kept together
+  const commonPhrases = [
+    'Project Management', 'Quality Assurance', 'Quality Control',
+    'Business Intelligence', 'Machine Learning', 'Data Science',
+    'Supply Chain', 'Customer Service', 'Human Resources',
+    'Information Technology', 'Business Development', 'Product Management',
+    'Software Development', 'Web Development', 'Mobile Development',
+    'Database Administration', 'Network Security', 'Cloud Computing',
+    'Artificial Intelligence', 'Natural Language Processing',
+    'User Experience', 'User Interface', 'Front End', 'Back End',
+    'Full Stack', 'DevOps', 'Site Reliability Engineering',
+    'Continuous Integration', 'Continuous Deployment',
+    'Test Driven Development', 'Agile Methodology', 'Scrum Master',
+    'Product Owner', 'Business Analyst', 'Systems Analyst',
+    'Technical Writer', 'Technical Support', 'Customer Support',
+    'Sales Engineer', 'Solutions Architect', 'Enterprise Architect',
+    'Security Engineer', 'Network Engineer', 'Database Engineer',
+    'Data Engineer', 'Data Analyst', 'Data Scientist',
+    'Machine Learning Engineer', 'AI Engineer', 'Cloud Engineer',
+    'Cloud Architect', 'Infrastructure Engineer', 'Infrastructure Architect',
+    'Software Engineer', 'Software Architect', 'Application Architect',
+    'Application Developer', 'Web Developer', 'Mobile Developer',
+    'Frontend Developer', 'Backend Developer', 'Full Stack Developer',
+    'UI Designer', 'UX Designer', 'UI/UX Designer',
+    'Graphic Designer', 'Visual Designer', 'Interaction Designer',
+    'Product Designer', 'Industrial Designer', 'Service Designer',
+    'Content Designer', 'Content Strategist', 'Content Manager',
+    'Content Writer', 'Technical Writer', 'Documentation Specialist',
+    'Knowledge Manager', 'Knowledge Engineer', 'Knowledge Architect',
+    'Information Architect', 'Information Designer', 'Information Manager',
+    'Process Engineer', 'Process Analyst', 'Process Manager',
+    'Process Owner', 'Process Architect', 'Process Designer',
+    'Quality Engineer', 'Quality Analyst', 'Quality Manager',
+    'Quality Assurance Engineer', 'Quality Control Engineer',
+    'Test Engineer', 'Test Analyst', 'Test Manager',
+    'Test Architect', 'Test Designer', 'Test Lead',
+    'Automation Engineer', 'Automation Analyst', 'Automation Manager',
+    'Automation Architect', 'Automation Designer', 'Automation Lead',
+    'Release Engineer', 'Release Manager', 'Release Coordinator',
+    'Build Engineer', 'Build Manager', 'Build Coordinator',
+    'Configuration Manager', 'Change Manager', 'Release Manager',
+    'Project Manager', 'Program Manager', 'Portfolio Manager',
+    'Product Manager', 'Product Owner', 'Scrum Master',
+    'Agile Coach', 'Agile Trainer', 'Agile Consultant',
+    'Lean Coach', 'Lean Trainer', 'Lean Consultant',
+    'Six Sigma', 'Lean Six Sigma', 'Black Belt',
+    'Green Belt', 'Yellow Belt', 'White Belt',
+    'Master Black Belt', 'Champion', 'Process Owner',
+    'Process Manager', 'Process Engineer', 'Process Analyst',
+    'Business Process', 'Business Process Management', 'Business Process Reengineering',
+    'Business Process Improvement', 'Business Process Optimization',
+    'Business Process Automation', 'Business Process Integration',
+    'Business Process Modeling', 'Business Process Analysis',
+    'Business Process Design', 'Business Process Implementation',
+    'Business Process Monitoring', 'Business Process Evaluation',
+    'Business Process Governance', 'Business Process Framework',
+    'Business Process Architecture', 'Business Process Strategy',
+    'Business Process Transformation', 'Business Process Innovation',
+    'Food & Beverage', 'Oil & Gas', 'Research & Development'
+  ];
+  
+  // Check if the text is a common phrase that should be kept together
+  if (commonPhrases.some(phrase => normalizedText.toLowerCase() === phrase.toLowerCase())) {
+    return [{
+      id: uuidv4(),
+      name: cleanKeywordName(normalizedText),
+      type
+    }];
+  }
+  
   // First try to split by common delimiters
-  let items: string[];
+  let items: string[] = [];
   
   // Check for common delimiters in order of preference
-  if (text.includes(',')) {
-    items = text.split(',');
-  } else if (text.includes(';')) {
-    items = text.split(';');
-  } else if (text.includes('•')) {
-    items = text.split('•');
-  } else if (text.includes('|')) {
-    items = text.split('|');
-  } else if (text.includes('/')) {
-    items = text.split('/');
+  if (normalizedText.includes(',')) {
+    items = normalizedText.split(',');
+  } else if (normalizedText.includes(';')) {
+    items = normalizedText.split(';');
+  } else if (normalizedText.includes('•')) {
+    items = normalizedText.split('•');
+  } else if (normalizedText.includes('|')) {
+    items = normalizedText.split('|');
+  } else if (normalizedText.includes('/') && !normalizedText.includes('http')) {
+    // Split by slash only if it's not part of a URL
+    items = normalizedText.split('/');
   } else {
     // Try to split by capitalized words pattern if there are no commas
     // This regex splits text like "JavaReactNodeJS" into ["Java", "React", "NodeJS"]
     const capitalWordSplitRegex = /([A-Z][a-z]+)(?=[A-Z])/g;
-    if (/[a-z][A-Z]/.test(text)) { // Test if there's a lowercase followed by uppercase
-      items = text.replace(capitalWordSplitRegex, '$1,').split(',');
+    if (/[a-z][A-Z]/.test(normalizedText)) { // Test if there's a lowercase followed by uppercase
+      items = normalizedText.replace(capitalWordSplitRegex, '$1,').split(',');
     } else {
       // Only split on spaces in very specific cases (comma-separated list without commas)
-      if (text.includes(' and ') || text.includes(' + ') || text.includes(' & ')) {
+      if (normalizedText.includes(' and ') || normalizedText.includes(' + ') || normalizedText.includes(' & ')) {
         // Split on conjunction indicators and clean up
-        items = text
+        items = normalizedText
           .replace(/ and /gi, ',')
           .replace(/ \+ /g, ',')
           .replace(/ & /g, ',')
           .split(',');
       } else {
         // Keep the keyword as is - don't split on spaces
-        items = [text];
+        items = [normalizedText];
       }
     }
   }
   
-  console.log(`Split "${text}" into ${items.length} items:`, items);
+  // Process each item to check for common phrases before final splitting
+  const processedItems: string[] = [];
   
-  return items
+  items.forEach(item => {
+    const trimmedItem = item.trim();
+    
+    // Skip empty items
+    if (!trimmedItem) return;
+    
+    // Check if this item contains any common phrases
+    let foundPhrase = false;
+    for (const phrase of commonPhrases) {
+      if (trimmedItem.toLowerCase().includes(phrase.toLowerCase())) {
+        // Extract the phrase and add it as a separate item
+        processedItems.push(phrase);
+        
+        // Remove the phrase from the item and process the remainder
+        const remainder = trimmedItem.replace(new RegExp(phrase, 'i'), '').trim();
+        if (remainder) {
+          processedItems.push(remainder);
+        }
+        
+        foundPhrase = true;
+        break;
+      }
+    }
+    
+    // If no common phrase was found, add the item as is
+    if (!foundPhrase) {
+      processedItems.push(trimmedItem);
+    }
+  });
+  
+  console.log(`Split "${text}" into ${processedItems.length} items:`, processedItems);
+  
+  return processedItems
     .map(item => item.trim())
     .filter(item => item.length > 0)
     .map(item => ({

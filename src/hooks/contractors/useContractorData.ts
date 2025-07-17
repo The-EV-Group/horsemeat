@@ -149,6 +149,8 @@ export function useContractorData(contractorId: string) {
           const dbCategory = item.keyword.category;
           const displayCategory = categoryMap[dbCategory];
           
+          console.log(`Processing keyword: ${item.keyword.name}, DB category: ${dbCategory}, Display category: ${displayCategory}`);
+          
           if (displayCategory && categorized[displayCategory]) {
             categorized[displayCategory].push({
               id: item.keyword.id,
@@ -156,7 +158,11 @@ export function useContractorData(contractorId: string) {
               category: item.keyword.category,
               inserted_at: item.keyword.inserted_at
             });
+          } else {
+            console.warn(`Could not map keyword ${item.keyword.name} with category ${dbCategory} to a display category`);
           }
+        } else {
+          console.warn('Received keyword relationship without keyword data');
         }
       });
 
