@@ -23,82 +23,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Single function to handle employee fetching/creation
-  const handleEmployeeRecord = async (user: User) => {
-    try {
-      console.log('Handling employee record for user:', user.id);
-      
-      // First try to fetch by user_id
-      let { data: employeeData, error } = await supabase
-        .from('internal_employee')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching employee by user_id:', error);
-        return;
-      }
-
-      if (!employeeData) {
-        // Try to fetch by email as fallback
-        console.log('No employee found by user_id, trying by email:', user.email);
-        const { data: employeeByEmail, error: emailError } = await supabase
-          .from('internal_employee')
-          .select('*')
-          .eq('email', user.email)
-          .maybeSingle();
-
-        if (emailError && emailError.code !== 'PGRST116') {
-          console.error('Error fetching employee by email:', emailError);
-          return;
-        }
-
-        if (employeeByEmail) {
-          // Found by email, update the user_id
-          console.log('Found employee by email, updating user_id');
-          const { data: updatedEmployee, error: updateError } = await supabase
-            .from('internal_employee')
-            .update({ user_id: user.id })
-            .eq('id', employeeByEmail.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('Error updating employee user_id:', updateError);
-            setEmployee(employeeByEmail); // Use the original record
-          } else {
-            setEmployee(updatedEmployee);
-          }
-        } else {
-          // No employee found, create new one
-          console.log('No employee found, creating new record');
-          const { data: newEmployee, error: insertError } = await supabase
-            .from('internal_employee')
-            .insert({
-              user_id: user.id,
-              email: user.email || '',
-              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown User',
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('Error creating employee:', insertError);
-          } else {
-            console.log('Created new employee:', newEmployee);
-            setEmployee(newEmployee);
-          }
-        }
-      } else {
-        console.log('Found existing employee by user_id:', employeeData);
-        setEmployee(employeeData);
-      }
-    } catch (err) {
-      console.error('Error handling employee record:', err);
-    }
-  };
-
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -108,7 +32,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await handleEmployeeRecord(session.user);
+          // Simple employee fetch - no creation, no updates
+          try {
+            console.log('Fetching employee for user:', session.user.id, 'email:', session.user.email);
+
+            // Add timeout to prevent hanging
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Employee fetch timeout')), 10000)
+            );
+
+            const fetchPromise = supabase
+              .from('internal_employee')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
+
+            const { data: employeeData, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+            console.log('Employee query result:', { employeeData, error });
+
+            if (error && error.code !== 'PGRST116') {
+              console.error('Error fetching employee:', error);
+              setEmployee(null);
+            } else if (employeeData) {
+              console.log('Found employee:', employeeData);
+              setEmployee(employeeData);
+            } else {
+              console.log('No employee found for user_id, trying email');
+              // Try by email as fallback with timeout
+              const emailFetchPromise = supabase
+                .from('internal_employee')
+                .select('*')
+                .eq('email', session.user.email)
+                .maybeSingle();
+
+              const { data: employeeByEmail, error: emailError } = await Promise.race([emailFetchPromise, timeoutPromise]) as any;
+
+              console.log('Email query result:', { employeeByEmail, emailError });
+
+              if (employeeByEmail) {
+                console.log('Found employee by email:', employeeByEmail);
+                setEmployee(employeeByEmail);
+              } else {
+                console.log('No employee found by email either');
+                setEmployee(null);
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching employee:', err);
+            setEmployee(null);
+          }
         } else {
           setEmployee(null);
         }
@@ -118,12 +91,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
-      if (!session) {
-        setLoading(false);
+
+      if (session?.user) {
+        // Simple employee fetch for initial session
+        try {
+          console.log('Initial: Fetching employee for user:', session.user.id, 'email:', session.user.email);
+
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Initial employee fetch timeout')), 10000)
+          );
+
+          const fetchPromise = supabase
+            .from('internal_employee')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          const { data: employeeData, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
+          console.log('Initial: Employee query result:', { employeeData, error });
+
+          if (error && error.code !== 'PGRST116') {
+            console.error('Initial: Error fetching employee:', error);
+            setEmployee(null);
+          } else if (employeeData) {
+            console.log('Initial: Found employee:', employeeData);
+            setEmployee(employeeData);
+          } else {
+            console.log('Initial: No employee found for user_id, trying email');
+            // Try by email as fallback with timeout
+            const emailFetchPromise = supabase
+              .from('internal_employee')
+              .select('*')
+              .eq('email', session.user.email)
+              .maybeSingle();
+
+            const { data: employeeByEmail, error: emailError } = await Promise.race([emailFetchPromise, timeoutPromise]) as any;
+
+            console.log('Initial: Email query result:', { employeeByEmail, emailError });
+
+            if (employeeByEmail) {
+              console.log('Initial: Found employee by email:', employeeByEmail);
+              setEmployee(employeeByEmail);
+            } else {
+              console.log('Initial: No employee found by email either');
+              setEmployee(null);
+            }
+          }
+        } catch (err) {
+          console.error('Initial: Error fetching employee:', err);
+          setEmployee(null);
+        }
       }
+
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
