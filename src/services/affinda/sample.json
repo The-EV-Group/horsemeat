@@ -1,0 +1,671 @@
+{
+    "data": {
+      "certifications": [
+        {
+          "id": 1168572712,
+          "rectangle": {
+            "x0": 46.52809,
+            "y0": 184.49658,
+            "x1": 346.49954,
+            "y1": 194.60559,
+            "pageIndex": 0
+          },
+          "rectangles": [
+            {
+              "x0": 46.52809,
+              "y0": 184.49658,
+              "x1": 346.49954,
+              "y1": 194.60559,
+              "pageIndex": 0
+            }
+          ],
+          "document": "WInOrKSd",
+          "pageIndex": 0,
+          "raw": "Beta Gamma Sigma International Business Honors Society Member",
+          "parsed": "Beta Gamma Sigma International Business Honors Society Member",
+          "confidence": null,
+          "classificationConfidence": null,
+          "textExtractionConfidence": 1,
+          "isVerified": false,
+          "isClientVerified": false,
+          "isAutoVerified": false,
+          "verifiedBy": null,
+          "dataPoint": null,
+          "field": "zGweCJbP",
+          "contentType": "text",
+          "parent": null
+        }
+      ],
+      "companies": [
+        {
+          "id": 1168572709,
+          "rectangle": {
+            "x0": 36.209,
+            "y0": 100.33093,
+            "x1": 504.77112,
+            "y1": 695.54663,
+            "pageIndex": 0
+          },
+          "rectangles": [
+            {
+              "x0": 436.7427,
+              "y0": 100.33093,
+              "x1": 504.77112,
+              "y1": 110.25293,
+              "pageIndex": 0
+            },
+            {
+              "x0": 36.209,
+              "y0": 403.0986,
+              "x1": 79.66852,
+              "y1": 410.6336,
+              "pageIndex": 0
+            },
+            {
+              "x0": 462.86948,
+              "y0": 100.33093,
+              "x1": 470.69046,
+              "y1": 108.04193,
+              "pageIndex": 0
+            },
+            {
+              "x0": 94.85753,
+              "y0": 402.9226,
+              "x1": 175.2097,
+              "y1": 410.6446,
+              "pageIndex": 0
+            },
+            {
+              "x0": 37.709,
+              "y0": 494.5986,
+              "x1": 88.49486,
+              "y1": 502.1336,
+              "pageIndex": 0
+            },
+            {
+              "x0": 37.19,
+              "y0": 558.92267,
+              "x1": 137.44739,
+              "y1": 568.85565,
+              "pageIndex": 0
+            },
+            {
+              "x0": 47.886307,
+              "y0": 659.9524,
+              "x1": 152.72026,
+              "y1": 667.8614,
+              "pageIndex": 0
+            },
+            {
+              "x0": 133.63303,
+              "y0": 687.8466,
+              "x1": 159.46931,
+              "y1": 695.54663,
+              "pageIndex": 0
+            },
+            {
+              "x0": 186.08858,
+              "y0": 660.3044,
+              "x1": 198.92894,
+              "y1": 667.8394,
+              "pageIndex": 0
+            },
+            {
+              "x0": 166.00308,
+              "y0": 674.1515,
+              "x1": 199.9382,
+              "y1": 684.2605,
+              "pageIndex": 0
+            }
+          ],
+          "document": "WInOrKSd",
+          "pageIndex": 0,
+          "raw": "Ernst & Young, Lumsden & McCormick LLP Lululemon Civix Strategy Group SUNY Fredonia NCAA Men's Ice Hockey",
+          "parsed": "Ernst & Young,\nLumsden & McCormick LLP\n\nLululemon\n\nCivix Strategy Group SUNY Fredonia NCAA Men's Ice Hockey",
+          "confidence": null,
+          "classificationConfidence": null,
+          "textExtractionConfidence": 1,
+          "isVerified": false,
+          "isClientVerified": false,
+          "isAutoVerified": false,
+          "verifiedBy": null,
+          "dataPoint": null,
+          "field": "hHmVuHbb",
+          "contentType": "text",
+          "parent": null
+        }
+      ],
+      "email": {
+        "id": 1168572705,
+        "rectangle": {
+          "x0": 410.84097,
+          "y0": 38.22815,
+          "x1": 528.95734,
+          "y1": 48.33716,
+          "pageIndex": 0
+        },
+        "rectangles": [
+          {
+            "x0": 410.84097,
+            "y0": 38.22815,
+            "x1": 528.95734,
+            "y1": 48.33716,
+            "pageIndex": 0
+          }
+        ],
+        "document": "WInOrKSd",
+        "pageIndex": 0,
+        "raw": "gsquared0236@gmail.com",
+        "parsed": "gsquared0236@gmail.com",
+        "confidence": null,
+        "classificationConfidence": null,
+        "textExtractionConfidence": 1,
+        "isVerified": false,
+        "isClientVerified": false,
+        "isAutoVerified": false,
+        "verifiedBy": null,
+        "dataPoint": null,
+        "field": "UUllqvTk",
+        "contentType": "text",
+        "parent": null
+      },
+      "fullName": {
+        "id": 1168572704,
+        "rectangle": {
+          "x0": 213.06403,
+          "y0": 11.777954,
+          "x1": 392.04816,
+          "y1": 33.44995,
+          "pageIndex": 0
+        },
+        "rectangles": [
+          {
+            "x0": 213.06403,
+            "y0": 11.777954,
+            "x1": 392.04816,
+            "y1": 33.44995,
+            "pageIndex": 0
+          }
+        ],
+        "document": "WInOrKSd",
+        "pageIndex": 0,
+        "raw": "Garrison Gagnon",
+        "parsed": "Garrison Gagnon",
+        "confidence": null,
+        "classificationConfidence": null,
+        "textExtractionConfidence": 1,
+        "isVerified": false,
+        "isClientVerified": false,
+        "isAutoVerified": false,
+        "verifiedBy": null,
+        "dataPoint": null,
+        "field": "OAaJwrSw",
+        "contentType": "text",
+        "parent": null
+      },
+      "goalsInterests": {
+        "id": 1168572713,
+        "rectangle": {
+          "x0": 36.187,
+          "y0": 100.14392,
+          "x1": 541.4619,
+          "y1": 124.10559,
+          "pageIndex": 0
+        },
+        "rectangles": [
+          {
+            "x0": 36.187,
+            "y0": 100.14392,
+            "x1": 128.1172726923077,
+            "y1": 108.030945,
+            "pageIndex": 0
+          },
+          {
+            "x0": 132.80593461538461,
+            "y0": 100.14392,
+            "x1": 204.8052,
+            "y1": 108.030945,
+            "pageIndex": 0
+          },
+          {
+            "x0": 508.6173,
+            "y0": 100.14392,
+            "x1": 541.4619,
+            "y1": 110.25293,
+            "pageIndex": 0
+          },
+          {
+            "x0": 36.86,
+            "y0": 113.99658,
+            "x1": 511.32385,
+            "y1": 124.10559,
+            "pageIndex": 0
+          }
+        ],
+        "document": "WInOrKSd",
+        "pageIndex": 0,
+        "raw": "Determined and teamoriented student seeking to further develop interpersonal, leadership, and financial skills in an interactive and impactful organization.",
+        "parsed": "Determined and team oriented student seeking to further develop interpersonal, leadership, and financial skills in an interactive and impactful organization.",
+        "confidence": null,
+        "classificationConfidence": null,
+        "textExtractionConfidence": 1,
+        "isVerified": false,
+        "isClientVerified": false,
+        "isAutoVerified": false,
+        "verifiedBy": null,
+        "dataPoint": null,
+        "field": "mKfKfgCQ",
+        "contentType": "text",
+        "parent": null
+      },
+      "industries": [
+        {
+          "id": 1168572711,
+          "rectangle": {
+            "x0": 36.1,
+            "y0": 263.90143,
+            "x1": 297.98782,
+            "y1": 653.27686,
+            "pageIndex": 0
+          },
+          "rectangles": [
+            {
+              "x0": 126.9532,
+              "y0": 263.90143,
+              "x1": 177.95546,
+              "y1": 274.01044,
+              "pageIndex": 0
+            },
+            {
+              "x0": 282.12454,
+              "y0": 403.0986,
+              "x1": 297.98782,
+              "y1": 410.5786,
+              "pageIndex": 0
+            },
+            {
+              "x0": 36.1,
+              "y0": 644.51434,
+              "x1": 82.74473,
+              "y1": 653.27686,
+              "pageIndex": 0
+            }
+          ],
+          "document": "WInOrKSd",
+          "pageIndex": 0,
+          "raw": "Accounting Tax Athletics",
+          "parsed": "Accounting Tax\n\nAthletics",
+          "confidence": null,
+          "classificationConfidence": null,
+          "textExtractionConfidence": 1,
+          "isVerified": false,
+          "isClientVerified": false,
+          "isAutoVerified": false,
+          "verifiedBy": null,
+          "dataPoint": null,
+          "field": "zROuRKuJ",
+          "contentType": "text",
+          "parent": null
+        }
+      ],
+      "jobTitles": [
+        {
+          "id": 1168572708,
+          "rectangle": {
+            "x0": 203.07834,
+            "y0": 403.0986,
+            "x1": 406.62036,
+            "y1": 682.03845,
+            "pageIndex": 0
+          },
+          "rectangles": [
+            {
+              "x0": 282.12454,
+              "y0": 403.0986,
+              "x1": 327.06982,
+              "y1": 410.6336,
+              "pageIndex": 0
+            },
+            {
+              "x0": 208.12602,
+              "y0": 494.2466,
+              "x1": 247.63846,
+              "y1": 502.1336,
+              "pageIndex": 0
+            },
+            {
+              "x0": 262.66824,
+              "y0": 558.74664,
+              "x1": 292.9315,
+              "y1": 566.63367,
+              "pageIndex": 0
+            },
+            {
+              "x0": 203.07834,
+              "y0": 674.1515,
+              "x1": 270.07382,
+              "y1": 682.03845,
+              "pageIndex": 0
+            },
+            {
+              "x0": 372.86688,
+              "y0": 659.9524,
+              "x1": 406.62036,
+              "y1": 670.0394,
+              "pageIndex": 0
+            }
+          ],
+          "document": "WInOrKSd",
+          "pageIndex": 0,
+          "raw": "Tax Intern Educator Fellow Team Assistant Captain",
+          "parsed": "Tax Intern Educator Fellow Team Assistant Captain",
+          "confidence": null,
+          "classificationConfidence": null,
+          "textExtractionConfidence": 1,
+          "isVerified": false,
+          "isClientVerified": false,
+          "isAutoVerified": false,
+          "verifiedBy": null,
+          "dataPoint": null,
+          "field": "PHvtfGPE",
+          "contentType": "text",
+          "parent": null
+        }
+      ],
+      "location": {
+        "id": 1168572707,
+        "rectangle": {
+          "x0": 175.96002,
+          "y0": 38.22815,
+          "x1": 325.94705,
+          "y1": 47.798157,
+          "pageIndex": 0
+        },
+        "rectangles": [
+          {
+            "x0": 175.96002,
+            "y0": 38.22815,
+            "x1": 325.94705,
+            "y1": 47.798157,
+            "pageIndex": 0
+          }
+        ],
+        "document": "WInOrKSd",
+        "pageIndex": 0,
+        "raw": "Gilmanton Iron Works, NH 03837",
+        "parsed": {
+          "formatted": "Gilmanton Iron Works, Gilmanton, NH 03837, USA",
+          "streetNumber": null,
+          "street": null,
+          "apartmentNumber": null,
+          "city": "Gilmanton",
+          "postalCode": "03837",
+          "state": "New Hampshire",
+          "stateCode": "NH",
+          "country": "United States",
+          "rawInput": "Gilmanton Iron Works, NH 03837",
+          "countryCode": "US",
+          "latitude": 43.4254906,
+          "longitude": -71.2963297,
+          "poBox": null
+        },
+        "confidence": null,
+        "classificationConfidence": null,
+        "textExtractionConfidence": 1,
+        "isVerified": false,
+        "isClientVerified": false,
+        "isAutoVerified": false,
+        "verifiedBy": null,
+        "dataPoint": null,
+        "field": "VzTRRdLB",
+        "contentType": "location",
+        "parent": null
+      },
+      "phoneNumber": {
+        "id": 1168572706,
+        "rectangle": {
+          "x0": 334.57483,
+          "y0": 38.22815,
+          "x1": 402.33423,
+          "y1": 48.315186,
+          "pageIndex": 0
+        },
+        "rectangles": [
+          {
+            "x0": 334.57483,
+            "y0": 38.22815,
+            "x1": 402.33423,
+            "y1": 48.315186,
+            "pageIndex": 0
+          }
+        ],
+        "document": "WInOrKSd",
+        "pageIndex": 0,
+        "raw": "(603) 325-7987",
+        "parsed": {
+          "rawText": "(603) 325-7987",
+          "countryCode": "US",
+          "nationalNumber": "(603) 325-7987",
+          "formattedNumber": "+1 603-325-7987",
+          "internationalCountryCode": 1
+        },
+        "confidence": null,
+        "classificationConfidence": null,
+        "textExtractionConfidence": 1,
+        "isVerified": false,
+        "isClientVerified": false,
+        "isAutoVerified": false,
+        "verifiedBy": null,
+        "dataPoint": null,
+        "field": "tLfodzLU",
+        "contentType": "phonenumber",
+        "parent": null
+      },
+      "skills": [
+        {
+          "id": 1168572710,
+          "rectangle": {
+            "x0": 47.380306,
+            "y0": 171.00763,
+            "x1": 420.31833,
+            "y1": 544.85565,
+            "pageIndex": 0
+          },
+          "rectangles": [
+            {
+              "x0": 47.886307,
+              "y0": 236.18872,
+              "x1": 131.38179,
+              "y1": 246.29773,
+              "pageIndex": 0
+            },
+            {
+              "x0": 312.3283,
+              "y0": 236.15143,
+              "x1": 420.31833,
+              "y1": 246.26044,
+              "pageIndex": 0
+            },
+            {
+              "x0": 47.468307,
+              "y0": 250.40143,
+              "x1": 186.02606,
+              "y1": 260.51044,
+              "pageIndex": 0
+            },
+            {
+              "x0": 47.380306,
+              "y0": 263.90143,
+              "x1": 112.4353,
+              "y1": 274.01044,
+              "pageIndex": 0
+            },
+            {
+              "x0": 312.0313,
+              "y0": 263.90143,
+              "x1": 350.83374,
+              "y1": 274.01044,
+              "pageIndex": 0
+            },
+            {
+              "x0": 47.523308,
+              "y0": 277.40143,
+              "x1": 85.45357,
+              "y1": 285.28842,
+              "pageIndex": 0
+            },
+            {
+              "x0": 312.1303,
+              "y0": 277.40143,
+              "x1": 373.21756,
+              "y1": 285.28842,
+              "pageIndex": 0
+            },
+            {
+              "x0": 90.85308,
+              "y0": 507.7466,
+              "x1": 166.31851,
+              "y1": 517.8556,
+              "pageIndex": 0
+            },
+            {
+              "x0": 188.00064,
+              "y0": 507.7466,
+              "x1": 254.81491,
+              "y1": 517.8556,
+              "pageIndex": 0
+            },
+            {
+              "x0": 85.021355,
+              "y0": 534.7467,
+              "x1": 106.5145723076923,
+              "y1": 544.8337,
+              "pageIndex": 0
+            },
+            {
+              "x0": 82.546974,
+              "y0": 171.00763,
+              "x1": 92.45407,
+              "y1": 178.8836,
+              "pageIndex": 0
+            },
+            {
+              "x0": 123.70914615384615,
+              "y0": 534.7467,
+              "x1": 208.61694,
+              "y1": 544.85565,
+              "pageIndex": 0
+            }
+          ],
+          "document": "WInOrKSd",
+          "pageIndex": 0,
+          "raw": "Statistical Analysis Operations Management Information Systems Structures Data Analytics Auditing Taxation Business Law inventory control merchandising, pointof sale (POS) systems",
+          "parsed": "Statistical Analysis Operations Management Information Systems Structures Data Analytics Auditing Taxation Business Law inventory control merchandising, point of sale (POS) systems",
+          "confidence": null,
+          "classificationConfidence": null,
+          "textExtractionConfidence": 1,
+          "isVerified": false,
+          "isClientVerified": false,
+          "isAutoVerified": false,
+          "verifiedBy": null,
+          "dataPoint": null,
+          "field": "TQFsEzkV",
+          "contentType": "text",
+          "parent": null
+        }
+      ],
+      "summary": {
+        "id": 1168572714,
+        "rectangle": null,
+        "rectangles": [],
+        "document": "WInOrKSd",
+        "pageIndex": 0,
+        "raw": "This candidate has a background in accounting with an upcoming Summer 2025 audit internship at Ernst & Young. They are pursuing a Bachelor of Science in Public Accountancy at SUNY Fredonia (expected May 2026) with a 3.7 GPA and consistent Dean's List recognition. Their work experience includes a Tax Intern position at Lumsden & McCormick LLP (January-April 2025), where they prepared federal income tax extensions and utilized CCH Axcess and Microsoft Excel. They also worked as an Educator at Lululemon (May-August 2024), managing inventory and using POS systems, and as a Fellow at Civix Strategy Group (May 2022-January 2023), recruiting candidates for the New Hampshire State House and researching bill voting history. The candidate has strong academic credentials with coursework in Statistical Analysis, Data Analytics in Accounting, Auditing, and Taxation. They demonstrate leadership as a Team Assistant Captain for SUNY Fredonia NCAA Men's Ice Hockey and previously at Holderness School as a House Leader and Student Mentor. Their skills span accounting, data management, inventory control, and political research.",
+        "parsed": "This candidate has a background in accounting with an upcoming Summer 2025 audit internship at Ernst & Young. They are pursuing a Bachelor of Science in Public Accountancy at SUNY Fredonia (expected May 2026) with a 3.7 GPA and consistent Dean's List recognition. Their work experience includes a Tax Intern position at Lumsden & McCormick LLP (January-April 2025), where they prepared federal income tax extensions and utilized CCH Axcess and Microsoft Excel. They also worked as an Educator at Lululemon (May-August 2024), managing inventory and using POS systems, and as a Fellow at Civix Strategy Group (May 2022-January 2023), recruiting candidates for the New Hampshire State House and researching bill voting history. The candidate has strong academic credentials with coursework in Statistical Analysis, Data Analytics in Accounting, Auditing, and Taxation. They demonstrate leadership as a Team Assistant Captain for SUNY Fredonia NCAA Men's Ice Hockey and previously at Holderness School as a House Leader and Student Mentor. Their skills span accounting, data management, inventory control, and political research.",
+        "confidence": null,
+        "classificationConfidence": null,
+        "textExtractionConfidence": 1,
+        "isVerified": false,
+        "isClientVerified": false,
+        "isAutoVerified": false,
+        "verifiedBy": null,
+        "dataPoint": null,
+        "field": "KQueHGjc",
+        "contentType": "text",
+        "parent": null
+      },
+      "rawText": "Garrison Gagnon \n3 15 Crystal Lake Rd | Gilmanton Iron Works, NH 03837 | (603) 325 - 7987 | gsquared0236@gmail.com \nObjective \nDetermined and team - oriented student with an upcoming Summer 2025 audit internship at Ernst & Young, seeking to further develop interpersonal, leadership, and financial skills in an interactive and impactful organization. \nEducation \nState University of New York At Fredonia, Expected May 2026 Bachelor of Science in Public Accountancy \n● Beta Gamma Sigma International Business Honors Society Member \n● 3.7 GPA \n• Dean's List (6 semesters) \n• Student - Athlete Advisory Committee \nRelevant Courses \n● Statistical Analysis \n● Operations Management \n● Information Systems Structures \n● Intermediate Accounting 2 \n● Data Analytics in Accounting \n● Auditing \n● Taxation 2 \n● Business Law 2 \nThe Holderness School, Holderness, New Hampshire, Graduated May 2021 3.6 GPA \n• High Honor Roll \n● Holderness School Student Mentor (Big Brother Program) \n● Holderness School elected House Leader, Senior Leader, and Pantry Job Leader \n● Project Outreach in Greater Lowell Food Kitchen, Youth Center, and Women's Center \nExperience \nLumsden & McCormick LLP Jan 2025 - April 2025 Tax Intern - Buffalo, NY \n● Prepared federal income tax extensions for various entities, including Forms 1040, 1120, 1120S, 1065, 1041, and 709, during high - volume busy season. \n● Trained on and utilized CCH Axcess and Microsoft Excel to prepare returns and manage client data efficiently. \n● Adapted quickly to a fast - paced tax season environment, balancing deadlines, technical learning, and client service expectations. \nLululemon May 2024 - August 2024 Educator - Kittery, ME \n● Managed inventory control and merchandising, ensuring the sales floor was well - stocked, organized, and visually appealing. \n● Utilized point - of - sale (POS) systems efficiently, handled transactions and returns accurately. \nCivix Strategy Group May 2022 - January 2023 Fellow - Concord, NH \n● Personally recruited candidates for the New Hampshire State House. \n● Remained in contact with New Hampshire State Representatives to gauge their stance on upcoming bills and impactful state policies. \n● Researched and managed bill voting history to transfer data into organizing software. \nAthletics \n● SUNY Fredonia NCAA Men's Ice Hockey 2022 - Present, Team Assistant Captain 2025 / 26 \n● Holderness School Varsity Hockey Team Assistant Captain, Senior Year \n● Holderness - Varsity Men's Hockey, Lacrosse, Golf, Cross Country, Weightlifting"
+    },
+    "meta": {
+      "identifier": "WInOrKSd",
+      "customIdentifier": null,
+      "ready": true,
+      "failed": false,
+      "readyDt": "2025-07-18T01:42:28.005589Z",
+      "fileName": "garry.pdf",
+      "expiryTime": null,
+      "language": "en",
+      "pdf": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/documents/garry_8gfDvxt.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNOSNGJON4%2F20250718%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20250718T014228Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEGoaDmFwLXNvdXRoZWFzdC0yIkcwRQIgdQ2jA0jnLyQ4lbUhHOAQ0WtAQ4yEm48aRrIK6ikZTXcCIQCLcjjJVXQGhEL2mR5I5ahcsn8NNV6WTvPUboc%2BQYz0yiqSBQiD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIMJ7VxtZnO%2F%2F4drysIKuYEepocXvK%2Boc%2B6Ea%2FKHd%2BoagZq%2BUg3RtTAn9wt4wYcqVsIOCbpDsCPGjdXgKrzWxzUaHdmK5K0Ds4viEq2js4v4%2FiMnYL272SiOv235kiPgKx4BhWbo9%2Fo9OeAAJEaAA7UCNTgnKwgm%2BMMQiHPzSAoIODKFvFqGKZL3FbHE1x%2BnD%2F9f%2F%2FybS9b6al33NPYbmd1GYSMTv9wbkU3cJ0zG2zlhYVKVfSmFNPLlkytHI5SJPHtf3fIkK%2B10wlnMoAsL4wlJZiRlQataKkFmiik5DfQtGo9lJHlbf56GZhv64Bu%2FZXuiCFdOsXI4h0VF%2FPyOTWV4FH0WOX68Y74yaTxkm5QxGd5Xbr70iZ3Sl7dSOKk7rkDXZg76DfZYMrW4UR%2F%2F5Zx5AH%2FDhdl5smY9v9l0aMmvh75hyN4N9TOt2ULf%2BYNyu1k629LkKUL%2FfeDkB%2FtYewPuEOeIUFsDf06lfE4MPaYNqeFJ3YhIwWWda1fXQkvnJ0wfX4s9bCl8KjnW4h5kDwD29DckFTxMIq9WK6RlZUswe8YNsL8qPimRriyMdzYhb%2FteL11HvYb2CG005T7YtJ13Ued4YvU%2FKZph8xa6BO0HD1APbbfckbEDHW2DITJbek0MopsYCtdIYgPhx4eYp%2B%2Fr7DiSoHT9svqlfeygaHJfd4kB2UNEx4ZGanY56N9UUuM4yWF9XMaRrzxYMcjczBqG3zJKeMzMEDgN63DKyrdqGQ85itDi6ROZku0QHhH%2BXjBKqDtJiVXSRY0lURMd9wh9CkJVjgEHH2Hw%2BayzhVj7vZzGuklZ%2FezXaCJ%2BL7PsCVzjUNo0Yow68rmwwY6mgGNAcTVLXxj2M6A5g05e9o9AECG3hTOzzBmoRIqmchuVPRT8o%2BFmsOCDkuMfYfqxl%2Fg1efLEi4bp09npM3orXdf9ILbasLBB1Hqb40D2B24VPOGh8vcXiSXWew3P8dsbKWEPxZl%2F%2Bsd4vg9SL6i8v53IVffgx5R9t%2B1lvoyu2qkFgR1Hha1N5dCs3BnjTFvNitdxnuWd2wKuccu&X-Amz-Signature=7394c118ae18a320242dccab441760e12a8900396cfc5e489e3f82fbfca18c68",
+      "parentDocument": null,
+      "childDocuments": [],
+      "pages": [
+        {
+          "id": 132119884,
+          "pageIndex": 0,
+          "image": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/pages/132119884_OmrYFpV.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNOSNGJON4%2F20250718%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20250718T014228Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEGoaDmFwLXNvdXRoZWFzdC0yIkcwRQIgdQ2jA0jnLyQ4lbUhHOAQ0WtAQ4yEm48aRrIK6ikZTXcCIQCLcjjJVXQGhEL2mR5I5ahcsn8NNV6WTvPUboc%2BQYz0yiqSBQiD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIMJ7VxtZnO%2F%2F4drysIKuYEepocXvK%2Boc%2B6Ea%2FKHd%2BoagZq%2BUg3RtTAn9wt4wYcqVsIOCbpDsCPGjdXgKrzWxzUaHdmK5K0Ds4viEq2js4v4%2FiMnYL272SiOv235kiPgKx4BhWbo9%2Fo9OeAAJEaAA7UCNTgnKwgm%2BMMQiHPzSAoIODKFvFqGKZL3FbHE1x%2BnD%2F9f%2F%2FybS9b6al33NPYbmd1GYSMTv9wbkU3cJ0zG2zlhYVKVfSmFNPLlkytHI5SJPHtf3fIkK%2B10wlnMoAsL4wlJZiRlQataKkFmiik5DfQtGo9lJHlbf56GZhv64Bu%2FZXuiCFdOsXI4h0VF%2FPyOTWV4FH0WOX68Y74yaTxkm5QxGd5Xbr70iZ3Sl7dSOKk7rkDXZg76DfZYMrW4UR%2F%2F5Zx5AH%2FDhdl5smY9v9l0aMmvh75hyN4N9TOt2ULf%2BYNyu1k629LkKUL%2FfeDkB%2FtYewPuEOeIUFsDf06lfE4MPaYNqeFJ3YhIwWWda1fXQkvnJ0wfX4s9bCl8KjnW4h5kDwD29DckFTxMIq9WK6RlZUswe8YNsL8qPimRriyMdzYhb%2FteL11HvYb2CG005T7YtJ13Ued4YvU%2FKZph8xa6BO0HD1APbbfckbEDHW2DITJbek0MopsYCtdIYgPhx4eYp%2B%2Fr7DiSoHT9svqlfeygaHJfd4kB2UNEx4ZGanY56N9UUuM4yWF9XMaRrzxYMcjczBqG3zJKeMzMEDgN63DKyrdqGQ85itDi6ROZku0QHhH%2BXjBKqDtJiVXSRY0lURMd9wh9CkJVjgEHH2Hw%2BayzhVj7vZzGuklZ%2FezXaCJ%2BL7PsCVzjUNo0Yow68rmwwY6mgGNAcTVLXxj2M6A5g05e9o9AECG3hTOzzBmoRIqmchuVPRT8o%2BFmsOCDkuMfYfqxl%2Fg1efLEi4bp09npM3orXdf9ILbasLBB1Hqb40D2B24VPOGh8vcXiSXWew3P8dsbKWEPxZl%2F%2Bsd4vg9SL6i8v53IVffgx5R9t%2B1lvoyu2qkFgR1Hha1N5dCs3BnjTFvNitdxnuWd2wKuccu&X-Amz-Signature=f236e8cf03782d17539d62ab1d8e58cb79afa7a5d4dd7ff519c740b294475f52",
+          "height": 792,
+          "width": 612,
+          "rotation": 0,
+          "imageTranslated": null
+        }
+      ],
+      "ocrConfidence": null,
+      "reviewUrl": null,
+      "createdDt": "2025-07-18T01:42:09.024612Z",
+      "errorDetail": null,
+      "file": "https://affinda-api-data-prod-ap1.s3.amazonaws.com/media/documents/garry_8gfDvxt.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=ASIAU4IX6YWNOSNGJON4%2F20250718%2Fap-southeast-2%2Fs3%2Faws4_request&X-Amz-Date=20250718T014228Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEGoaDmFwLXNvdXRoZWFzdC0yIkcwRQIgdQ2jA0jnLyQ4lbUhHOAQ0WtAQ4yEm48aRrIK6ikZTXcCIQCLcjjJVXQGhEL2mR5I5ahcsn8NNV6WTvPUboc%2BQYz0yiqSBQiD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2F8BEAMaDDMzNTU5NDU3MTE2MiIMJ7VxtZnO%2F%2F4drysIKuYEepocXvK%2Boc%2B6Ea%2FKHd%2BoagZq%2BUg3RtTAn9wt4wYcqVsIOCbpDsCPGjdXgKrzWxzUaHdmK5K0Ds4viEq2js4v4%2FiMnYL272SiOv235kiPgKx4BhWbo9%2Fo9OeAAJEaAA7UCNTgnKwgm%2BMMQiHPzSAoIODKFvFqGKZL3FbHE1x%2BnD%2F9f%2F%2FybS9b6al33NPYbmd1GYSMTv9wbkU3cJ0zG2zlhYVKVfSmFNPLlkytHI5SJPHtf3fIkK%2B10wlnMoAsL4wlJZiRlQataKkFmiik5DfQtGo9lJHlbf56GZhv64Bu%2FZXuiCFdOsXI4h0VF%2FPyOTWV4FH0WOX68Y74yaTxkm5QxGd5Xbr70iZ3Sl7dSOKk7rkDXZg76DfZYMrW4UR%2F%2F5Zx5AH%2FDhdl5smY9v9l0aMmvh75hyN4N9TOt2ULf%2BYNyu1k629LkKUL%2FfeDkB%2FtYewPuEOeIUFsDf06lfE4MPaYNqeFJ3YhIwWWda1fXQkvnJ0wfX4s9bCl8KjnW4h5kDwD29DckFTxMIq9WK6RlZUswe8YNsL8qPimRriyMdzYhb%2FteL11HvYb2CG005T7YtJ13Ued4YvU%2FKZph8xa6BO0HD1APbbfckbEDHW2DITJbek0MopsYCtdIYgPhx4eYp%2B%2Fr7DiSoHT9svqlfeygaHJfd4kB2UNEx4ZGanY56N9UUuM4yWF9XMaRrzxYMcjczBqG3zJKeMzMEDgN63DKyrdqGQ85itDi6ROZku0QHhH%2BXjBKqDtJiVXSRY0lURMd9wh9CkJVjgEHH2Hw%2BayzhVj7vZzGuklZ%2FezXaCJ%2BL7PsCVzjUNo0Yow68rmwwY6mgGNAcTVLXxj2M6A5g05e9o9AECG3hTOzzBmoRIqmchuVPRT8o%2BFmsOCDkuMfYfqxl%2Fg1efLEi4bp09npM3orXdf9ILbasLBB1Hqb40D2B24VPOGh8vcXiSXWew3P8dsbKWEPxZl%2F%2Bsd4vg9SL6i8v53IVffgx5R9t%2B1lvoyu2qkFgR1Hha1N5dCs3BnjTFvNitdxnuWd2wKuccu&X-Amz-Signature=7394c118ae18a320242dccab441760e12a8900396cfc5e489e3f82fbfca18c68",
+      "collection": {
+        "identifier": "peEUdVim",
+        "name": "EVG Resume Extractor",
+        "extractor": null,
+        "validationRules": [],
+        "autoRefreshValidationResults": true
+      },
+      "documentType": "peEUdVim",
+      "workspace": {
+        "identifier": "PvftDqHJ",
+        "name": "Recruitment"
+      },
+      "tags": [],
+      "isOcrd": false,
+      "isConfirmed": false,
+      "confirmedDt": null,
+      "confirmedBy": null,
+      "isRejected": false,
+      "rejectedDt": null,
+      "rejectedBy": null,
+      "isArchived": false,
+      "archivedDt": null,
+      "archivedBy": null,
+      "errorCode": null,
+      "sourceEmail": null,
+      "sourceEmailAddress": null,
+      "createdBy": {
+        "id": 22228,
+        "name": "Alim Darmenov",
+        "username": "adarmenov",
+        "email": "adarmenov@theevgroup.com",
+        "avatar": null,
+        "master": null
+      },
+      "regionBias": null,
+      "html": null,
+      "warningMessages": []
+    },
+    "error": {
+      "errorCode": null,
+      "errorDetail": null
+    },
+    "warnings": [],
+    "extractor": ""
+  }

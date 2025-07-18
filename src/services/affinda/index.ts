@@ -5,4 +5,4 @@ export * from './affindaTypes';
 export { parseResumeWithAffinda } from './affindaClient';
 
 // Export the mapper functions 
-export { mapAffindaResponseToAppData, processLocationData, splitKeywords } from './affindaMappers';
+export { mapAffindaResponseToAppData } from './affindaMappers';

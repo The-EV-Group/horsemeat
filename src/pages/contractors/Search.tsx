@@ -21,8 +21,17 @@ import { Eye, Star, MapPin, DollarSign, List, Users } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 export default function SearchContractors() {
-  const { contractors, loading, searchContractors, listAllContractors, error } =
-    useContractorSearch();
+  const { 
+    contractors, 
+    loading, 
+    loadingMore, 
+    hasMore, 
+    totalResults, 
+    searchContractors, 
+    listAllContractors, 
+    showMore, 
+    error 
+  } = useContractorSearch();
   const [selectedContractorId, setSelectedContractorId] = useState<
     string | null
   >(null);
@@ -128,7 +137,7 @@ export default function SearchContractors() {
             {viewMode === "list" ? "All Contractors" : "Search Results"}
             {contractors.length > 0 && (
               <span className="text-sm font-normal text-gray-500 ml-2">
-                ({contractors.length} found)
+                ({contractors.length}{totalResults > contractors.length ? ` of ${totalResults}` : ''} found)
               </span>
             )}
           </CardTitle>
@@ -288,6 +297,30 @@ export default function SearchContractors() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+          
+          {/* Show More Button */}
+          {hasMore && contractors.length > 0 && (
+            <div className="flex justify-center pt-4 border-t">
+              <Button
+                onClick={showMore}
+                disabled={loadingMore}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    Loading more...
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4" />
+                    Show More ({totalResults - contractors.length} remaining)
+                  </>
+                )}
+              </Button>
             </div>
           )}
         </CardContent>

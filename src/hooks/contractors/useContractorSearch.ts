@@ -23,8 +23,12 @@ export interface SearchFilters {
 
 export function useContractorSearch() {
   const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [allContractors, setAllContractors] = useState<Contractor[]>([]); // Store all results
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentLimit, setCurrentLimit] = useState(7);
 
   const searchContractors = async (filters: SearchFilters) => {
     try {
@@ -129,7 +133,7 @@ export function useContractorSearch() {
   };
   
   /**
-   * Search for contractors with keyword filtering - optimized for large datasets
+   * Search for contractors with keyword filtering - optimized with proper scoring
    */
   const searchWithKeywords = async (filters: SearchFilters) => {
     try {
@@ -142,23 +146,22 @@ export function useContractorSearch() {
         ...filters.jobTitles.map(k => k.id)
       ];
       
-      console.log(`Searching with ${keywordIds.length} keywords`);
+      console.log(`Searching with ${keywordIds.length} keywords:`, keywordIds);
       
-      // Use a more efficient approach with a single query that joins contractors and keywords
-      // This avoids loading all contractor-keyword relationships into memory
-      let query = supabase
+      if (keywordIds.length === 0) {
+        await searchWithoutKeywords(filters);
+        return;
+      }
+      
+      // Step 1: Get contractors that match other filters first (without keywords)
+      let baseQuery = supabase
         .from('contractor')
-        .select(`
-          *,
-          contractor_keyword!inner(keyword_id)
-        `)
-        .in('contractor_keyword.keyword_id', keywordIds)
-        .order('inserted_at', { ascending: false });
+        .select('*');
       
-      // Apply text search if provided
+      // Apply non-keyword filters
       if (filters.searchTerm && filters.searchTerm.trim()) {
         const searchTerm = filters.searchTerm.trim();
-        query = query.or(
+        baseQuery = baseQuery.or(
           `full_name.ilike.%${searchTerm}%,` +
           `email.ilike.%${searchTerm}%,` +
           `phone.ilike.%${searchTerm}%,` +
@@ -167,71 +170,105 @@ export function useContractorSearch() {
         );
       }
 
-      // Apply boolean filters
       if (filters.available === true || filters.available === false) {
-        query = query.eq('available', filters.available);
+        baseQuery = baseQuery.eq('available', filters.available);
       }
 
-      // Apply pay type filter
       if (filters.payType && filters.payType.trim()) {
-        query = query.eq('pay_type', filters.payType);
+        baseQuery = baseQuery.eq('pay_type', filters.payType);
       }
 
-      // Apply location filters
       if (filters.state && filters.state.trim()) {
-        query = query.eq('state', filters.state);
+        baseQuery = baseQuery.eq('state', filters.state);
       }
 
       if (filters.city && filters.city.trim()) {
-        query = query.eq('city', filters.city);
+        baseQuery = baseQuery.eq('city', filters.city);
       }
 
-      // Execute the query
-      const { data: contractorsWithKeywords, error } = await query;
+      const { data: baseContractors, error: baseError } = await baseQuery;
       
-      if (error) {
-        console.error('Error in contractor search query:', error);
-        throw error;
+      if (baseError) {
+        console.error('Error in base contractor query:', baseError);
+        throw baseError;
       }
       
-      if (!contractorsWithKeywords || contractorsWithKeywords.length === 0) {
-        console.log('No contractors match the filters');
+      if (!baseContractors || baseContractors.length === 0) {
+        console.log('No contractors match the base filters');
         setContractors([]);
         return;
       }
       
-      console.log(`Found ${contractorsWithKeywords.length} contractors with at least one matching keyword`);
+      console.log(`Found ${baseContractors.length} contractors matching base filters`);
       
-      // Group contractors by ID to remove duplicates and count matching keywords
-      const contractorMap: Record<string, any> = {};
-      contractorsWithKeywords.forEach(contractor => {
-        if (!contractorMap[contractor.id]) {
-          contractorMap[contractor.id] = {
-            ...contractor,
-            matchingKeywordCount: 1
-          };
-        } else {
-          contractorMap[contractor.id].matchingKeywordCount++;
-        }
-      });
+      // Step 2: Get keyword matches for these contractors
+      const contractorIds = baseContractors.map(c => c.id);
       
-      // Convert to array and calculate match percentages
-      const contractorsWithScores = Object.values(contractorMap).map(contractor => {
-        const matchPercentage = keywordIds.length > 0
-          ? Math.round((contractor.matchingKeywordCount / keywordIds.length) * 100)
-          : 0;
-        
-        return {
-          ...contractor,
-          matchPercentage
+      const { data: keywordMatches, error: keywordError } = await supabase
+        .from('contractor_keyword')
+        .select('contractor_id, keyword_id')
+        .in('contractor_id', contractorIds)
+        .in('keyword_id', keywordIds);
+      
+      if (keywordError) {
+        console.error('Error fetching keyword matches:', keywordError);
+        throw keywordError;
+      }
+      
+      console.log(`Found ${keywordMatches?.length || 0} keyword matches`);
+      
+      // Step 3: Calculate match scores
+      const contractorScores: Record<string, { contractor: any; matchingKeywords: Set<string> }> = {};
+      
+      // Initialize all contractors with empty keyword sets
+      baseContractors.forEach(contractor => {
+        contractorScores[contractor.id] = {
+          contractor,
+          matchingKeywords: new Set()
         };
       });
       
-      // Sort by match percentage (highest first)
-      contractorsWithScores.sort((a, b) => (b.matchPercentage || 0) - (a.matchPercentage || 0));
+      // Count unique keyword matches per contractor
+      keywordMatches?.forEach(match => {
+        if (contractorScores[match.contractor_id]) {
+          contractorScores[match.contractor_id].matchingKeywords.add(match.keyword_id);
+        }
+      });
       
-      console.log('Final result:', contractorsWithScores.length, 'contractors with match scores');
-      setContractors(contractorsWithScores);
+      // Step 4: Filter contractors that have at least one keyword match and calculate percentages
+      const contractorsWithScores = Object.values(contractorScores)
+        .filter(({ matchingKeywords }) => matchingKeywords.size > 0) // Only include contractors with keyword matches
+        .map(({ contractor, matchingKeywords }) => {
+          const matchingKeywordCount = matchingKeywords.size;
+          const matchPercentage = Math.round((matchingKeywordCount / keywordIds.length) * 100);
+          
+          console.log(`Contractor ${contractor.full_name}: ${matchingKeywordCount}/${keywordIds.length} keywords = ${matchPercentage}%`);
+          
+          return {
+            ...contractor,
+            matchingKeywordCount,
+            matchPercentage
+          };
+        })
+        .sort((a, b) => {
+          // Sort by match percentage (highest first), then by number of matching keywords
+          if (b.matchPercentage !== a.matchPercentage) {
+            return b.matchPercentage - a.matchPercentage;
+          }
+          return b.matchingKeywordCount - a.matchingKeywordCount;
+        });
+      
+      console.log(`Final result: ${contractorsWithScores.length} contractors with keyword matches`);
+      console.log('Match distribution:', contractorsWithScores.reduce((acc, c) => {
+        acc[c.matchPercentage] = (acc[c.matchPercentage] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>));
+      
+      // Store all results and set pagination state
+      setAllContractors(contractorsWithScores);
+      setCurrentLimit(7);
+      setHasMore(contractorsWithScores.length > 7);
+      setContractors(contractorsWithScores.slice(0, 7));
     } catch (error) {
       console.error('Error in searchWithKeywords:', error);
       throw error;
@@ -255,11 +292,19 @@ export function useContractorSearch() {
       }
 
       console.log('All contractors fetched:', data?.length);
-      setContractors(data || []);
+      
+      // Store all results and set pagination state
+      const allResults = data || [];
+      setAllContractors(allResults);
+      setCurrentLimit(7);
+      setHasMore(allResults.length > 7);
+      setContractors(allResults.slice(0, 7));
     } catch (err) {
       console.error('Error listing all contractors:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setContractors([]);
+      setAllContractors([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
@@ -291,6 +336,24 @@ export function useContractorSearch() {
     }
   };
 
+  const showMore = async () => {
+    try {
+      setLoadingMore(true);
+      const newLimit = currentLimit + 7;
+      const moreContractors = allContractors.slice(0, newLimit);
+      
+      setContractors(moreContractors);
+      setCurrentLimit(newLimit);
+      setHasMore(allContractors.length > newLimit);
+      
+      console.log(`Showing ${moreContractors.length} of ${allContractors.length} contractors`);
+    } catch (err) {
+      console.error('Error loading more contractors:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const deleteContractor = async (contractorId: string) => {
     try {
       // First delete related records
@@ -319,6 +382,7 @@ export function useContractorSearch() {
 
       // Update local state
       setContractors(prev => prev.filter(c => c.id !== contractorId));
+      setAllContractors(prev => prev.filter(c => c.id !== contractorId));
     } catch (err) {
       console.error('Error deleting contractor:', err);
       throw err;
@@ -328,10 +392,14 @@ export function useContractorSearch() {
   return {
     contractors,
     loading,
+    loadingMore,
     error,
+    hasMore,
+    totalResults: allContractors.length,
     searchContractors,
     listAllContractors,
     searchByName,
+    showMore,
     deleteContractor
   };
 }

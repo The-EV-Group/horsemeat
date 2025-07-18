@@ -481,14 +481,7 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
             {localContractor.prefers_hourly ? (
               <>
                 {renderEditableField('hourly_rate', 'Hourly Rate ($)', localContractor.hourly_rate, 'number')}
-                {localContractor.pay_rate_upper && (
-                  <div className="space-y-2">
-                    <Label className="font-medium text-gray-700">Upper Hourly Rate</Label>
-                    <div className="min-h-[32px] p-2 bg-gray-50 rounded-md border text-sm">
-                      ${localContractor.pay_rate_upper}
-                    </div>
-                  </div>
-                )}
+                {renderEditableField('pay_rate_upper', 'Upper Hourly Rate ($)', localContractor.pay_rate_upper, 'text')}
               </>
             ) : (
               <>
