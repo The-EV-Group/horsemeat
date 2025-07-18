@@ -11,20 +11,20 @@ export const highlightAutoFilledInputs = (fields: Record<string, any>) => {
       const value = fields[key];
       return value !== undefined && value !== null && value !== '';
     });
-    
+
     console.log('Highlighting fields:', fieldNames);
-    
+
     // Find all inputs with names matching our fields
     fieldNames.forEach(field => {
       const elements = document.querySelectorAll(`[name="${field}"]`);
       console.log(`Found ${elements.length} elements for field: ${field}`);
-      
+
       elements.forEach(el => {
         // Add custom styling for highlighted fields
         if (el instanceof HTMLElement) {
           el.style.backgroundColor = '#fffbcc'; // Light yellow background
           el.style.transition = 'background-color 0.3s ease';
-          
+
           // Add an event listener to clear highlight on user interaction
           const clearHighlight = () => {
             el.style.backgroundColor = '';
@@ -33,7 +33,7 @@ export const highlightAutoFilledInputs = (fields: Record<string, any>) => {
             el.removeEventListener('change', clearHighlight);
             el.removeEventListener('focus', clearHighlight);
           };
-          
+
           el.addEventListener('input', clearHighlight);
           el.addEventListener('change', clearHighlight);
           el.addEventListener('focus', clearHighlight);
@@ -48,7 +48,7 @@ export const highlightAutoFilledInputs = (fields: Record<string, any>) => {
  */
 export const resetFormHighlights = () => {
   const highlightedElements = document.querySelectorAll('input[style*="background-color"], select[style*="background-color"], textarea[style*="background-color"]');
-  
+
   highlightedElements.forEach(el => {
     if (el instanceof HTMLElement && el.style.backgroundColor === 'rgb(255, 251, 204)') {
       el.style.backgroundColor = '';

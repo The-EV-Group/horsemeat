@@ -95,9 +95,6 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">H++</span>
-            </div>
             <span className="text-2xl font-bold text-blue-600">
               Horsemeat++
             </span>

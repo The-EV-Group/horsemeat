@@ -69,6 +69,57 @@ export interface AffindaPhoneNumberParsed {
   internationalCountryCode: number;
 }
 
+// Table-based structure for Affinda response
+export interface AffindaTableRow {
+  id: number;
+  rectangle?: { x0: number; y0: number; x1: number; y1: number; pageIndex: number };
+  rectangles?: { x0: number; y0: number; x1: number; y1: number; pageIndex: number }[];
+  document: string;
+  pageIndex: number;
+  raw: string;
+  parsed: {
+    skill?: AffindaDataPoint[];
+    company?: AffindaDataPoint[];
+    jobTitle?: AffindaDataPoint[];
+    industry?: AffindaDataPoint[];
+    certification?: AffindaDataPoint[];
+  };
+  confidence: number | null;
+  classificationConfidence: number | null;
+  textExtractionConfidence: number | null;
+  isVerified: boolean;
+  isClientVerified: boolean;
+  isAutoVerified: boolean;
+  verifiedBy: string | null;
+  dataPoint: string | null;
+  field: string;
+  contentType: string;
+  parent: number;
+}
+
+export interface AffindaTable {
+  id: number;
+  rectangle?: { x0: number; y0: number; x1: number; y1: number; pageIndex: number };
+  rectangles?: { x0: number; y0: number; x1: number; y1: number; pageIndex: number }[];
+  document: string;
+  pageIndex: number;
+  raw: string;
+  parsed: {
+    rows: AffindaTableRow[];
+  };
+  confidence: number | null;
+  classificationConfidence: number | null;
+  textExtractionConfidence: number | null;
+  isVerified: boolean;
+  isClientVerified: boolean;
+  isAutoVerified: boolean;
+  verifiedBy: string | null;
+  dataPoint: string | null;
+  field: string;
+  contentType: string;
+  parent: number | null;
+}
+
 export interface AffindaResumeData {
   summary?: AffindaDataPoint;
   location?: AffindaDataPoint & { parsed?: AffindaLocationParsed | Record<string, unknown> };
@@ -76,10 +127,17 @@ export interface AffindaResumeData {
   phoneNumber?: AffindaDataPoint & { parsed?: AffindaPhoneNumberParsed | Record<string, unknown> };
   email?: AffindaDataPoint;
   goalsInterests?: AffindaDataPoint;
+  // Table structure (current format) - can be single table or array of tables
+  skillsTable?: AffindaTable | AffindaTable[];
+  industriesTable?: AffindaTable | AffindaTable[];
+  jobTitlesTable?: AffindaTable | AffindaTable[];
+  certificationsTable?: AffindaTable | AffindaTable[];
+  companiesTable?: AffindaTable | AffindaTable[];
+  // Legacy array structure for backward compatibility
   skills?: AffindaDataPoint[];
   industries?: AffindaDataPoint[];
   jobTitles?: AffindaDataPoint[];
-  certifications?: AffindaDataPoint[] | null;
+  certifications?: AffindaDataPoint[];
   companies?: AffindaDataPoint[];
   rawText?: string;
 }

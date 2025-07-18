@@ -17,7 +17,7 @@ export function LocationSection({ register, watchedValues, setValue }: LocationS
   return (
     <Card className="shadow-soft">
       <CardHeader>
-        <CardTitle>Location</CardTitle>
+        <CardTitle>Address</CardTitle>
         <CardDescription>Geographic information</CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-6">

@@ -1,198 +1,13 @@
-import { AffindaResumeData, ParsedResumeData, ContractorData, ExtractedKeyword } from './affindaTypes';
+import { AffindaResumeData, ParsedResumeData, ContractorData, ExtractedKeyword, AffindaTable } from './affindaTypes';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Advanced keyword splitting based on actual Affinda data patterns
- * The sample data shows that Affinda returns space-separated keywords, not comma-separated!
+ * Extract text from Affinda data point
  */
-function splitKeywords(text: string, category: string): ExtractedKeyword[] {
-  if (!text || !text.trim()) return [];
-  
-  console.log(`\n--- Splitting ${category}: "${text}" ---`);
-  
-  let normalizedText = text.trim();
-  let items: string[] = [];
-  
-  // Handle different patterns based on the actual sample data
-  
-  // First, handle obvious comma-separated parts (like at the end of skills)
-  if (normalizedText.includes(',')) {
-    // Split by commas first, then handle space-separated parts
-    const commaParts = normalizedText.split(',');
-    
-    commaParts.forEach(part => {
-      const trimmedPart = part.trim();
-      if (!trimmedPart) return;
-      
-      // If this part looks like multiple words that should be separate keywords
-      // (like "Statistical Analysis Operations Management")
-      if (category === 'skill' && trimmedPart.split(' ').length > 3 && !trimmedPart.includes('(')) {
-        // This is likely multiple space-separated skills
-        const spaceParts = trimmedPart.split(' ');
-        let currentSkill = '';
-        
-        for (let i = 0; i < spaceParts.length; i++) {
-          const word = spaceParts[i];
-          
-          // Check if this word starts a new skill (capitalized and not a common word)
-          if (word[0] === word[0].toUpperCase() && 
-              !['and', 'or', 'of', 'in', 'the', 'a', 'an'].includes(word.toLowerCase())) {
-            
-            // If we have a current skill, save it
-            if (currentSkill.trim()) {
-              items.push(currentSkill.trim());
-            }
-            
-            // Start new skill
-            currentSkill = word;
-          } else {
-            // Add to current skill
-            currentSkill += ' ' + word;
-          }
-        }
-        
-        // Don't forget the last skill
-        if (currentSkill.trim()) {
-          items.push(currentSkill.trim());
-        }
-      } else {
-        // This part is a single item
-        items.push(trimmedPart);
-      }
-    });
-  } 
-  // Handle space-separated keywords (most common in Affinda data)
-  else {
-    // For job titles like "Tax Intern Educator Fellow Team Assistant Captain"
-    if (category === 'job title') {
-      // Common job title patterns
-      const jobTitlePatterns = [
-        'Tax Intern', 'Team Assistant', 'Assistant Captain', 'Team Captain',
-        'Project Manager', 'Senior Developer', 'Lead Developer', 'Software Engineer',
-        'Data Analyst', 'Business Analyst', 'Product Manager', 'Account Manager'
-      ];
-      
-      let remainingText = normalizedText;
-      
-      // Extract known patterns first
-      jobTitlePatterns.forEach(pattern => {
-        if (remainingText.includes(pattern)) {
-          items.push(pattern);
-          remainingText = remainingText.replace(pattern, '').trim();
-        }
-      });
-      
-      // Split remaining words
-      if (remainingText) {
-        const words = remainingText.split(' ').filter(w => w.trim());
-        items.push(...words);
-      }
-    }
-    // For companies like "Ernst & Young Lumsden McCormick LLP Lululemon"
-    else if (category === 'company') {
-      // Handle company patterns
-      let remainingText = normalizedText;
-      
-      // Known company patterns
-      const companyPatterns = [
-        'Ernst & Young', 'Lumsden & McCormick LLP', 'SUNY Fredonia',
-        'NCAA Men\'s Ice Hockey', 'Civix Strategy Group'
-      ];
-      
-      companyPatterns.forEach(pattern => {
-        if (remainingText.includes(pattern)) {
-          items.push(pattern);
-          remainingText = remainingText.replace(pattern, '').trim();
-        }
-      });
-      
-      // Split remaining words as individual companies
-      if (remainingText) {
-        const words = remainingText.split(' ').filter(w => w.trim());
-        items.push(...words);
-      }
-    }
-    // For skills - most complex case
-    else if (category === 'skill') {
-      // Skills are often multi-word concepts separated by spaces
-      // Like "Statistical Analysis Operations Management Information Systems"
-      
-      const skillPatterns = [
-        'Statistical Analysis', 'Operations Management', 'Information Systems',
-        'Data Analytics', 'Business Law', 'inventory control', 'point of sale',
-        'POS systems', 'Microsoft Excel', 'Microsoft Word', 'Microsoft PowerPoint',
-        'Project Management', 'Quality Assurance', 'Machine Learning',
-        'Artificial Intelligence', 'Database Administration', 'Network Security'
-      ];
-      
-      let remainingText = normalizedText;
-      
-      // Extract known multi-word skills first
-      skillPatterns.forEach(pattern => {
-        const regex = new RegExp(pattern, 'gi');
-        if (regex.test(remainingText)) {
-          items.push(pattern);
-          remainingText = remainingText.replace(regex, '').trim();
-        }
-      });
-      
-      // For remaining text, try to identify skill boundaries
-      if (remainingText) {
-        const words = remainingText.split(' ').filter(w => w.trim());
-        let currentSkill = '';
-        
-        for (let i = 0; i < words.length; i++) {
-          const word = words[i];
-          
-          // If word is capitalized and we have a current skill, it might be a new skill
-          if (word[0] === word[0].toUpperCase() && currentSkill.trim()) {
-            items.push(currentSkill.trim());
-            currentSkill = word;
-          } else {
-            currentSkill += (currentSkill ? ' ' : '') + word;
-          }
-        }
-        
-        if (currentSkill.trim()) {
-          items.push(currentSkill.trim());
-        }
-      }
-    }
-    // For industries and certifications - simpler space splitting
-    else {
-      items = normalizedText.split(' ').filter(w => w.trim());
-    }
-  }
-  
-  // Clean up and create keyword objects
-  const cleanedItems = items
-    .map(item => item.trim())
-    .filter(item => item.length > 0)
-    .filter(item => item.length > 1) // Remove single characters
-    .map(item => {
-      // Clean up common issues
-      item = item.replace(/[()]/g, '').trim(); // Remove parentheses
-      item = item.replace(/^[,;|]+|[,;|]+$/g, ''); // Remove leading/trailing delimiters
-      return item;
-    })
-    .filter(item => item.length > 0);
-  
-  console.log(`Split into ${cleanedItems.length} items:`, cleanedItems);
-  
-  return cleanedItems.map(item => ({
-    id: uuidv4(),
-    name: item.charAt(0).toUpperCase() + item.slice(1), // Capitalize first letter
-    type: category
-  }));
-}
-
-/**
- * Extract text from Affinda data point - handles both parsed and raw
- */
-function extractText(dataPoint: any): string {
+const extractText = (dataPoint: any): string => {
   if (!dataPoint) return '';
   
-  // Try parsed first (usually cleaner), then raw
+  // Try parsed first (this is cleaned and formatted), then raw
   if (dataPoint.parsed && typeof dataPoint.parsed === 'string') {
     return dataPoint.parsed.trim();
   }
@@ -202,12 +17,12 @@ function extractText(dataPoint: any): string {
   }
   
   return '';
-}
+};
 
 /**
  * Extract phone number and clean it to digits only
  */
-function extractPhoneNumber(phoneData: any): string {
+const extractPhoneNumber = (phoneData: any): string => {
   if (!phoneData) return '';
   
   let phoneText = '';
@@ -215,7 +30,6 @@ function extractPhoneNumber(phoneData: any): string {
   // Try to get phone from parsed data first
   if (phoneData.parsed && typeof phoneData.parsed === 'object') {
     const parsed = phoneData.parsed;
-    // Use nationalNumber, but clean it since it might have formatting
     phoneText = String(parsed.nationalNumber || parsed.formattedNumber || '');
   }
   
@@ -226,19 +40,19 @@ function extractPhoneNumber(phoneData: any): string {
   
   // Clean to digits only
   return phoneText.replace(/\D/g, '');
-}
+};
 
 /**
  * Extract location data from Affinda's parsed location object
  */
-function extractLocationData(locationData: any): Partial<ContractorData> {
+const extractLocationData = (locationData: any): Partial<ContractorData> => {
   const location: Partial<ContractorData> = {};
   
   if (!locationData) return location;
   
   console.log('Processing location data:', locationData);
   
-  // Try parsed location first (this is an object in the sample)
+  // Try parsed location first (this is an object)
   if (locationData.parsed && typeof locationData.parsed === 'object') {
     const parsed = locationData.parsed;
     
@@ -285,14 +99,203 @@ function extractLocationData(locationData: any): Partial<ContractorData> {
   
   console.log('Extracted location:', location);
   return location;
-}
+};
+
+/**
+ * Normalize table input to array (handles both single table and array of tables)
+ */
+const normalizeToArray = <T>(input: T | T[] | undefined): T[] => {
+  if (!input) return [];
+  return Array.isArray(input) ? input : [input];
+};
+
+/**
+ * Deduplicate keywords based on name (case-insensitive)
+ */
+const deduplicateKeywords = (keywords: ExtractedKeyword[]): ExtractedKeyword[] => {
+  const seen = new Set<string>();
+  const deduplicated: ExtractedKeyword[] = [];
+  
+  for (const keyword of keywords) {
+    const normalizedName = keyword.name.toLowerCase().trim();
+    if (!seen.has(normalizedName)) {
+      seen.add(normalizedName);
+      deduplicated.push(keyword);
+    } else {
+      console.log(`Deduplicating: "${keyword.name}" (already exists)`);
+    }
+  }
+  
+  if (keywords.length !== deduplicated.length) {
+    console.log(`Deduplication: ${keywords.length} → ${deduplicated.length} keywords`);
+  }
+  return deduplicated;
+};
+
+/**
+ * Extract keywords from single table structure (PRIMARY METHOD)
+ * Keywords are already individual items - DO NOT SPLIT
+ */
+const extractKeywordsFromTable = (table: AffindaTable | undefined, keywordType: string): ExtractedKeyword[] => {
+  if (!table?.parsed?.rows) {
+    return [];
+  }
+  
+  const keywords: ExtractedKeyword[] = [];
+  
+  console.log(`Processing ${keywordType} table with ${table.parsed.rows.length} rows`);
+  
+  table.parsed.rows.forEach((row, rowIndex) => {
+    console.log(`Row ${rowIndex + 1}: "${row.raw}"`);
+    
+    // Get the appropriate keyword array based on type
+    let keywordArray: any[] = [];
+    
+    switch (keywordType) {
+      case 'skill':
+        keywordArray = row.parsed.skill || [];
+        break;
+      case 'company':
+        keywordArray = row.parsed.company || [];
+        break;
+      case 'job title':
+        keywordArray = row.parsed.jobTitle || [];
+        break;
+      case 'industry':
+        keywordArray = row.parsed.industry || [];
+        break;
+      case 'certification':
+        keywordArray = row.parsed.certification || [];
+        break;
+    }
+    
+    // Process each keyword in the array - these are already individual items
+    keywordArray.forEach((keywordItem, keywordIndex) => {
+      const keywordText = extractText(keywordItem);
+      if (keywordText) {
+        console.log(`  ${keywordType} ${keywordIndex + 1}: "${keywordText}"`);
+        
+        // Create keyword directly - NO SPLITTING needed
+        const keyword: ExtractedKeyword = {
+          id: uuidv4(),
+          name: keywordText, // Use as-is, already clean
+          type: keywordType
+        };
+        keywords.push(keyword);
+      }
+    });
+  });
+  
+  console.log(`Total ${keywordType}s extracted from table:`, keywords.length);
+  return keywords;
+};
+
+/**
+ * Extract keywords from multiple tables (handles arrays of tables)
+ */
+const extractKeywordsFromMultipleTables = (
+  tables: (AffindaTable | AffindaTable[]) | undefined, 
+  keywordType: string
+): ExtractedKeyword[] => {
+  const tableArray = normalizeToArray(tables);
+  
+  if (tableArray.length === 0) {
+    return [];
+  }
+  
+  console.log(`Processing ${tableArray.length} ${keywordType} table(s)`);
+  
+  const allKeywords: ExtractedKeyword[] = [];
+  
+  tableArray.forEach((table, index) => {
+    console.log(`Processing ${keywordType} table ${index + 1}/${tableArray.length}`);
+    const tableKeywords = extractKeywordsFromTable(table, keywordType);
+    allKeywords.push(...tableKeywords);
+  });
+  
+  // Deduplicate keywords across all tables
+  const deduplicatedKeywords = deduplicateKeywords(allKeywords);
+  
+  console.log(`Total ${keywordType}s extracted from ${tableArray.length} table(s):`, deduplicatedKeywords.length);
+  return deduplicatedKeywords;
+};
+
+/**
+ * Extract keywords from array structure (FALLBACK ONLY)
+ * Only used if table structure is not available
+ */
+const extractKeywordsFromArray = (keywordArray: any[] | undefined, keywordType: string): ExtractedKeyword[] => {
+  if (!keywordArray || !Array.isArray(keywordArray)) {
+    return [];
+  }
+  
+  const keywords: ExtractedKeyword[] = [];
+  
+  console.log(`Processing ${keywordType} array with ${keywordArray.length} items (FALLBACK)`);
+  
+  keywordArray.forEach((keywordItem, index) => {
+    const keywordText = extractText(keywordItem);
+    if (keywordText) {
+      console.log(`  ${keywordType} ${index + 1}: "${keywordText.substring(0, 100)}${keywordText.length > 100 ? '...' : ''}"`);
+      
+      // For array format, we need to split concatenated strings
+      const splitItems = splitConcatenatedKeywords(keywordText, keywordType);
+      keywords.push(...splitItems);
+      console.log(`    -> Split into ${splitItems.length} items: ${splitItems.map(k => k.name).slice(0, 5).join(', ')}${splitItems.length > 5 ? '...' : ''}`);
+    }
+  });
+  
+  console.log(`Total ${keywordType}s extracted:`, keywords.length);
+  return keywords;
+};
+
+/**
+ * Split concatenated keywords (ONLY for array fallback format)
+ */
+const splitConcatenatedKeywords = (text: string, category: string): ExtractedKeyword[] => {
+  if (!text || !text.trim()) return [];
+  
+  const normalizedText = text.trim();
+  let items: string[] = [];
+  
+  // Split by common delimiters
+  if (normalizedText.includes('\n\n')) {
+    items = normalizedText.split('\n\n');
+  } else if (normalizedText.includes('\n')) {
+    items = normalizedText.split('\n');
+  } else if (normalizedText.includes(',')) {
+    items = normalizedText.split(',');
+  } else if (normalizedText.includes(';')) {
+    items = normalizedText.split(';');
+  } else if (normalizedText.includes('|')) {
+    items = normalizedText.split('|');
+  } else if (normalizedText.includes('/') && !normalizedText.includes('http')) {
+    items = normalizedText.split('/');
+  } else if (normalizedText.includes(' and ')) {
+    items = normalizedText.split(' and ');
+  } else if (normalizedText.includes(' & ')) {
+    items = normalizedText.split(' & ');
+  } else {
+    items = [normalizedText];
+  }
+  
+  // Clean and create keyword objects
+  return items
+    .map(item => item.trim())
+    .filter(item => item.length > 0 && item.length < 100)
+    .map(item => ({
+      id: uuidv4(),
+      name: item.charAt(0).toUpperCase() + item.slice(1),
+      type: category
+    }));
+};
 
 /**
  * Map Affinda response to our application data structure
- * Based on actual sample data format
+ * Prioritizes table structure over array structure
  */
 export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): ParsedResumeData => {
-  console.log('=== Starting Affinda mapping with real data format ===');
+  console.log('=== Starting Affinda mapping ===');
   console.log('Input data keys:', Object.keys(resumeData));
   
   // Initialize contractor with required defaults
@@ -364,83 +367,71 @@ export const mapAffindaResponseToAppData = (resumeData: AffindaResumeData): Pars
       }
     }
 
-    // Extract keywords with improved splitting
-    console.log('--- Extracting keywords with advanced splitting ---');
+    // Extract keywords - PRIORITIZE TABLE STRUCTURE (supports multiple tables)
+    console.log('--- Extracting keywords from tables ---');
 
-    // Skills - most complex due to space-separated format
-    if (resumeData.skills && Array.isArray(resumeData.skills)) {
-      console.log(`Processing ${resumeData.skills.length} skills entries`);
-      resumeData.skills.forEach((skill, index) => {
-        const skillText = extractText(skill);
-        if (skillText) {
-          console.log(`Skills entry ${index + 1}: "${skillText}"`);
-          const splitSkills = splitKeywords(skillText, 'skill');
-          keywords.skills.push(...splitSkills);
-        }
-      });
+    // Skills - TABLE FIRST (preferred, supports multiple tables)
+    if (resumeData.skillsTable) {
+      console.log('✅ Processing skills table(s)...');
+      keywords.skills = extractKeywordsFromMultipleTables(resumeData.skillsTable, 'skill');
+    } else if (resumeData.skills) {
+      console.log('⚠️ Fallback: Processing skills array...');
+      keywords.skills = extractKeywordsFromArray(resumeData.skills, 'skill');
     }
 
-    // Job Titles - space-separated format
-    if (resumeData.jobTitles && Array.isArray(resumeData.jobTitles)) {
-      console.log(`Processing ${resumeData.jobTitles.length} job title entries`);
-      resumeData.jobTitles.forEach((jobTitle, index) => {
-        const titleText = extractText(jobTitle);
-        if (titleText) {
-          console.log(`Job title entry ${index + 1}: "${titleText}"`);
-          const splitTitles = splitKeywords(titleText, 'job title');
-          keywords["job titles"].push(...splitTitles);
-        }
-      });
+    // Job Titles - TABLE FIRST (preferred, supports multiple tables)
+    if (resumeData.jobTitlesTable) {
+      console.log('✅ Processing job titles table(s)...');
+      keywords["job titles"] = extractKeywordsFromMultipleTables(resumeData.jobTitlesTable, 'job title');
+    } else if (resumeData.jobTitles) {
+      console.log('⚠️ Fallback: Processing job titles array...');
+      keywords["job titles"] = extractKeywordsFromArray(resumeData.jobTitles, 'job title');
     }
 
-    // Companies - mixed format
-    if (resumeData.companies && Array.isArray(resumeData.companies)) {
-      console.log(`Processing ${resumeData.companies.length} company entries`);
-      resumeData.companies.forEach((company, index) => {
-        const companyText = extractText(company);
-        if (companyText) {
-          console.log(`Company entry ${index + 1}: "${companyText}"`);
-          const splitCompanies = splitKeywords(companyText, 'company');
-          keywords.companies.push(...splitCompanies);
-        }
-      });
+    // Companies - TABLE FIRST (preferred, supports multiple tables)
+    if (resumeData.companiesTable) {
+      console.log('✅ Processing companies table(s)...');
+      keywords.companies = extractKeywordsFromMultipleTables(resumeData.companiesTable, 'company');
+    } else if (resumeData.companies) {
+      console.log('⚠️ Fallback: Processing companies array...');
+      keywords.companies = extractKeywordsFromArray(resumeData.companies, 'company');
     }
 
-    // Industries - space-separated
-    if (resumeData.industries && Array.isArray(resumeData.industries)) {
-      console.log(`Processing ${resumeData.industries.length} industry entries`);
-      resumeData.industries.forEach((industry, index) => {
-        const industryText = extractText(industry);
-        if (industryText) {
-          console.log(`Industry entry ${index + 1}: "${industryText}"`);
-          const splitIndustries = splitKeywords(industryText, 'industry');
-          keywords.industries.push(...splitIndustries);
-        }
-      });
+    // Industries - TABLE FIRST (preferred, supports multiple tables)
+    if (resumeData.industriesTable) {
+      console.log('✅ Processing industries table(s)...');
+      keywords.industries = extractKeywordsFromMultipleTables(resumeData.industriesTable, 'industry');
+    } else if (resumeData.industries) {
+      console.log('⚠️ Fallback: Processing industries array...');
+      keywords.industries = extractKeywordsFromArray(resumeData.industries, 'industry');
     }
 
-    // Certifications
-    if (resumeData.certifications && Array.isArray(resumeData.certifications)) {
-      console.log(`Processing ${resumeData.certifications.length} certification entries`);
-      resumeData.certifications.forEach((cert, index) => {
-        const certText = extractText(cert);
-        if (certText) {
-          console.log(`Certification entry ${index + 1}: "${certText}"`);
-          const splitCerts = splitKeywords(certText, 'certification');
-          keywords.certifications.push(...splitCerts);
-        }
-      });
+    // Certifications - TABLE FIRST (preferred, supports multiple tables)
+    if (resumeData.certificationsTable) {
+      console.log('✅ Processing certifications table(s)...');
+      keywords.certifications = extractKeywordsFromMultipleTables(resumeData.certificationsTable, 'certification');
+    } else if (resumeData.certifications) {
+      console.log('⚠️ Fallback: Processing certifications array...');
+      keywords.certifications = extractKeywordsFromArray(resumeData.certifications, 'certification');
     }
 
-    // Summary
+    // Final validation against expected results
     console.log('=== Final Mapping Results ===');
     console.log('Contractor fields populated:', Object.keys(contractor).filter(key => contractor[key as keyof ContractorData] !== undefined).length);
     console.log('Keywords extracted:');
-    console.log('- Skills:', keywords.skills.length, keywords.skills.map(s => s.name));
-    console.log('- Job Titles:', keywords["job titles"].length, keywords["job titles"].map(t => t.name));
-    console.log('- Companies:', keywords.companies.length, keywords.companies.map(c => c.name));
-    console.log('- Industries:', keywords.industries.length, keywords.industries.map(i => i.name));
-    console.log('- Certifications:', keywords.certifications.length, keywords.certifications.map(c => c.name));
+    console.log('- Skills:', keywords.skills.length, '(expected: 5)');
+    console.log('- Job Titles:', keywords["job titles"].length, '(expected: 2)');
+    console.log('- Companies:', keywords.companies.length, '(expected: 1)');
+    console.log('- Industries:', keywords.industries.length, '(expected: 1)');
+    console.log('- Certifications:', keywords.certifications.length, '(expected: 1)');
+
+    // Log actual extracted keywords for debugging
+    console.log('Extracted keywords:');
+    console.log('Skills:', keywords.skills.map(k => k.name));
+    console.log('Job Titles:', keywords["job titles"].map(k => k.name));
+    console.log('Companies:', keywords.companies.map(k => k.name));
+    console.log('Industries:', keywords.industries.map(k => k.name));
+    console.log('Certifications:', keywords.certifications.map(k => k.name));
 
     return {
       contractor,
