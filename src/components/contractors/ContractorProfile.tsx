@@ -171,31 +171,38 @@ export function ContractorProfile({ contractorId, onClose, returnToPath }: Contr
   };
 
   const handleResumeView = async () => {
-    if (localContractor.resume_url) {
-      try {
-        // Extract the file path from the existing URL
-        // The URL format is like: .../storage/v1/object/sign/resumes/[filename]?token=...
-        const urlParts = localContractor.resume_url.split('/');
-        const filePathWithQuery = urlParts[urlParts.length - 1];
-        const filePath = filePathWithQuery.split('?')[0];
+    if (!localContractor.resume_url) return;
+    
+    try {
+      // Extract the file path from the existing URL
+      const urlParts = localContractor.resume_url.split('/');
+      const filePathWithQuery = urlParts[urlParts.length - 1];
+      const filePath = filePathWithQuery.split('?')[0];
 
-        // Generate a new signed URL that's valid for 30 minutes
-        const { data, error } = await supabase.storage
-          .from('resumes')
-          .createSignedUrl(filePath, 60 * 30); // 30 minutes
+      // Generate a new signed URL that's valid for 30 minutes
+      const { data, error } = await supabase.storage
+        .from('resumes')
+        .createSignedUrl(filePath, 60 * 30);
 
-        if (error || !data) {
-          throw new Error('Failed to generate signed URL');
-        }
-
-        // Open the new signed URL
-        window.open(data.signedUrl, '_blank');
-      } catch (error) {
+      if (error || !data) {
         console.error('Error generating signed URL:', error);
-        toast.error('Failed to open resume. Please try again.');
+        // Fallback to the stored URL
+        window.open(localContractor.resume_url, '_blank', 'noopener,noreferrer');
+        return;
+      }
 
-        // Fallback to the stored URL if we can't generate a new one
-        window.open(localContractor.resume_url, '_blank');
+      // Open the new signed URL in a new tab without affecting current page
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Error viewing resume:', error);
+      toast.error('Failed to open resume. Please try again.');
+      
+      // Fallback to the stored URL
+      try {
+        window.open(localContractor.resume_url, '_blank', 'noopener,noreferrer');
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        toast.error('Unable to open resume file.');
       }
     }
   };

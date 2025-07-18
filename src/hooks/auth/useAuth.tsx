@@ -24,135 +24,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
+    let mounted = true;
 
-        if (session?.user) {
-          // Simple employee fetch - no creation, no updates
-          try {
-            console.log('Fetching employee for user:', session.user.id, 'email:', session.user.email);
-
-            // Add timeout to prevent hanging
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error('Employee fetch timeout')), 10000)
-            );
-
-            const fetchPromise = supabase
-              .from('internal_employee')
-              .select('*')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
-
-            const { data: employeeData, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-            console.log('Employee query result:', { employeeData, error });
-
-            if (error && error.code !== 'PGRST116') {
-              console.error('Error fetching employee:', error);
-              setEmployee(null);
-            } else if (employeeData) {
-              console.log('Found employee:', employeeData);
-              setEmployee(employeeData);
-            } else {
-              console.log('No employee found for user_id, trying email');
-              // Try by email as fallback with timeout
-              const emailFetchPromise = supabase
-                .from('internal_employee')
-                .select('*')
-                .eq('email', session.user.email)
-                .maybeSingle();
-
-              const { data: employeeByEmail, error: emailError } = await Promise.race([emailFetchPromise, timeoutPromise]) as any;
-
-              console.log('Email query result:', { employeeByEmail, emailError });
-
-              if (employeeByEmail) {
-                console.log('Found employee by email:', employeeByEmail);
-                setEmployee(employeeByEmail);
-              } else {
-                console.log('No employee found by email either');
-                setEmployee(null);
-              }
-            }
-          } catch (err) {
-            console.error('Error fetching employee:', err);
+    const handleSession = async (session: Session | null) => {
+      if (!mounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        try {
+          // Simple query - just get the employee record
+          const { data } = await supabase
+            .from('internal_employee')
+            .select('*')
+            .eq('email', session.user.email)
+            .single();
+          
+          if (mounted) {
+            setEmployee(data);
+          }
+        } catch (error) {
+          console.error('Employee fetch error:', error);
+          if (mounted) {
             setEmployee(null);
           }
-        } else {
+        }
+      } else {
+        if (mounted) {
           setEmployee(null);
         }
-
+      }
+      
+      if (mounted) {
         setLoading(false);
+      }
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        handleSession(session);
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        // Simple employee fetch for initial session
-        try {
-          console.log('Initial: Fetching employee for user:', session.user.id, 'email:', session.user.email);
-
-          // Add timeout to prevent hanging
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Initial employee fetch timeout')), 10000)
-          );
-
-          const fetchPromise = supabase
-            .from('internal_employee')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
-
-          const { data: employeeData, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
-
-          console.log('Initial: Employee query result:', { employeeData, error });
-
-          if (error && error.code !== 'PGRST116') {
-            console.error('Initial: Error fetching employee:', error);
-            setEmployee(null);
-          } else if (employeeData) {
-            console.log('Initial: Found employee:', employeeData);
-            setEmployee(employeeData);
-          } else {
-            console.log('Initial: No employee found for user_id, trying email');
-            // Try by email as fallback with timeout
-            const emailFetchPromise = supabase
-              .from('internal_employee')
-              .select('*')
-              .eq('email', session.user.email)
-              .maybeSingle();
-
-            const { data: employeeByEmail, error: emailError } = await Promise.race([emailFetchPromise, timeoutPromise]) as any;
-
-            console.log('Initial: Email query result:', { employeeByEmail, emailError });
-
-            if (employeeByEmail) {
-              console.log('Initial: Found employee by email:', employeeByEmail);
-              setEmployee(employeeByEmail);
-            } else {
-              console.log('Initial: No employee found by email either');
-              setEmployee(null);
-            }
-          }
-        } catch (err) {
-          console.error('Initial: Error fetching employee:', err);
-          setEmployee(null);
-        }
-      }
-
-      setLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -165,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
-
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,

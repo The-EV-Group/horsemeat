@@ -300,12 +300,16 @@ export function useContractorData(contractorId: string) {
 
   const addTask = async (task: Omit<Task, 'id' | 'created_at' | 'created_by'>) => {
     try {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('contractor_task')
         .insert({
           ...task,
           contractor_id: contractorId,
-          created_by: user?.id,
+          created_by: user.id,
           created_at: new Date().toISOString()
         });
 
@@ -349,12 +353,16 @@ export function useContractorData(contractorId: string) {
 
   const addHistoryEntry = async (note: string) => {
     try {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('contractor_history')
         .insert({
           contractor_id: contractorId,
           note,
-          created_by: user?.id,
+          created_by: user.id,
           inserted_at: new Date().toISOString()
         });
 
