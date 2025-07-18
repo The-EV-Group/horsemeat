@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/integrations/supabase/types';
+// Import the RPC type extensions
+import '@/integrations/supabase/rpc-types';
 
 type Keyword = Tables<'keyword'>;
 
@@ -104,46 +106,33 @@ export function useKeywords(category?: string) {
         return [];
       }
 
-      // Get usage counts by counting contractor_keyword entries
+      // Get keyword IDs for accurate counting
       const keywordIds = keywordsData.map(k => k.id);
-
-      // Get all contractor_keyword entries for these keywords
-      const { data: allLinks, error: linkError } = await supabase
-        .from('contractor_keyword')
-        .select('keyword_id, contractor_id');
+      
+      // Get accurate contractor counts using Supabase function
+      const { data: keywordCounts, error: countError } = await supabase
+        .rpc('get_keyword_usage');
         
-      if (linkError) {
-        console.error('Error fetching keyword links:', linkError);
+      if (countError) {
+        console.error('Error fetching keyword contractor counts:', countError);
       }
       
-      console.log(`Found ${allLinks?.length || 0} total links`);
+      console.log(`Found ${keywordCounts?.length || 0} keyword contractor count entries`);
       
-      // Create a map of keyword ID to count
+      // Create a map of keyword ID to count from the returned data
       const countMap: Record<string, number> = {};
       
-      // Group by keyword_id and count unique contractor_ids
-      if (allLinks && allLinks.length > 0) {
-        // Create a map to track unique contractor IDs per keyword
-        const keywordContractors: Record<string, Set<string>> = {};
-        
-        // Process all links
-        allLinks.forEach(link => {
-          if (!keywordContractors[link.keyword_id]) {
-            keywordContractors[link.keyword_id] = new Set();
-          }
-          keywordContractors[link.keyword_id].add(link.contractor_id);
-        });
-        
-        // Convert sets to counts
-        Object.keys(keywordContractors).forEach(keywordId => {
-          countMap[keywordId] = keywordContractors[keywordId].size;
+      // Process counts from the database function
+      if (keywordCounts && keywordCounts.length > 0) {
+        keywordCounts.forEach(entry => {
+          countMap[entry.keyword_id] = entry.contractor_count;
         });
       }
 
-      // Combine keyword data with usage counts
+      // Combine keyword data with accurate usage counts
       const keywordsWithUsageData = keywordsData.map(keyword => ({
         ...keyword,
-        is_linked: !!countMap[keyword.id],
+        is_linked: (countMap[keyword.id] || 0) > 0,
         contractor_count: countMap[keyword.id] || 0
       }));
 

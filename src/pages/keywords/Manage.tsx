@@ -81,21 +81,31 @@ export default function ManageKeywords() {
   const navigate = useNavigate();
 
   // Use our optimized hook
-  const { keywordsWithUsage, loading: hookLoading, fetchKeywordsWithUsage, error, createKeyword } = useKeywords();
-
-  // Add direct state for keywords as a fallback
-  const [directKeywords, setDirectKeywords] = useState<KeywordWithUsage[]>([]);
-  const [directLoading, setDirectLoading] = useState(false);
-
-  // Combine loading states
-  const loading = hookLoading || directLoading;
+  const { keywordsWithUsage, loading, fetchKeywordsWithUsage, error, createKeyword } = useKeywords();
 
   const activeCategory = CATEGORIES.find((cat) => cat.key === activeTab);
 
-  // Filter keywords based on search term
+  // Enhanced search handler
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Immediate filtering for better UX
+    if (!value.trim()) {
+      setFilteredKeywords(keywordsWithUsage);
+    } else {
+      const filtered = keywordsWithUsage.filter((keyword) =>
+        keyword.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredKeywords(filtered);
+    }
+  };
+  
+  // Filter keywords based on search term when keywords list or search term changes
   useEffect(() => {
-    console.log('keywordsWithUsage updated:', keywordsWithUsage.length, 'keywords');
-
+    console.log('keywordsWithUsage or searchTerm updated:', keywordsWithUsage.length, 'keywords');
+    
+    // Apply current search filter
     if (!searchTerm.trim()) {
       setFilteredKeywords(keywordsWithUsage);
       console.log('Setting all keywords:', keywordsWithUsage.length);
@@ -106,103 +116,17 @@ export default function ManageKeywords() {
       setFilteredKeywords(filtered);
       console.log('Setting filtered keywords:', filtered.length);
     }
+    // We include searchTerm in the dependency array, but handleSearchChange already does immediate filtering
+    // This is just to ensure proper dependency tracking and handle cases where searchTerm is changed programmatically
   }, [keywordsWithUsage, searchTerm]);
 
   // Fetch keywords when tab changes
   useEffect(() => {
     if (activeCategory) {
       console.log('Active category changed to:', activeCategory.key, 'with dbValue:', activeCategory.dbValue);
-
-      // Use direct approach to fetch keywords
-      setDirectLoading(true);
-
-      // First, get all keywords for this category
-      const fetchKeywords = async () => {
-        try {
-          const { data: keywordsData, error: keywordsError } = await supabase
-            .from('keyword')
-            .select('*')
-            .eq('category', activeCategory.dbValue)
-            .order('name');
-
-          if (keywordsError) {
-            console.error('Error fetching keywords:', keywordsError);
-            setDirectLoading(false);
-            return;
-          }
-
-          console.log(`Found ${keywordsData?.length || 0} keywords for ${activeCategory.dbValue}`);
-
-          if (!keywordsData || keywordsData.length === 0) {
-            setDirectKeywords([]);
-            setFilteredKeywords([]);
-            setDirectLoading(false);
-            return;
-          }
-
-          // Get all contractor_keyword entries for these keywords
-          const { data: allLinks, error: linkError } = await supabase
-            .from('contractor_keyword')
-            .select('keyword_id, contractor_id');
-
-          if (linkError) {
-            console.error('Error fetching keyword links:', linkError);
-          }
-
-          console.log(`Found ${allLinks?.length || 0} total links`);
-
-          // Create a map of keyword ID to count
-          const countMap: Record<string, Set<string>> = {};
-
-          // Group by keyword_id and count unique contractor_ids
-          if (allLinks) {
-            allLinks.forEach(link => {
-              if (!countMap[link.keyword_id]) {
-                countMap[link.keyword_id] = new Set();
-              }
-              countMap[link.keyword_id].add(link.contractor_id);
-            });
-          }
-
-          // Create keywords with usage information
-          const keywordsWithUsageData = keywordsData.map(keyword => {
-            const contractorIds = countMap[keyword.id] || new Set();
-            return {
-              ...keyword,
-              is_linked: contractorIds.size > 0,
-              contractor_count: contractorIds.size
-            };
-          });
-
-          // Log summary of linked vs unlinked keywords
-          const linkedCount = keywordsWithUsageData.filter(k => k.is_linked).length;
-          const unlinkedCount = keywordsWithUsageData.length - linkedCount;
-          console.log(`Keywords with links: ${linkedCount}, without links: ${unlinkedCount}`);
-
-          // Log some sample keywords with their link counts
-          const sampleLinked = keywordsWithUsageData.filter(k => k.is_linked).slice(0, 3);
-          const sampleUnlinked = keywordsWithUsageData.filter(k => !k.is_linked).slice(0, 3);
-
-          console.log('Sample linked keywords:');
-          sampleLinked.forEach(k => console.log(`- ${k.name}: ${k.contractor_count} links`));
-
-          console.log('Sample unlinked keywords:');
-          sampleUnlinked.forEach(k => console.log(`- ${k.name}: ${k.contractor_count} links`));
-
-          setDirectKeywords(keywordsWithUsageData);
-          setFilteredKeywords(keywordsWithUsageData);
-
-          console.log('Set direct keywords:', keywordsData.length);
-        } catch (error) {
-          console.error('Error in direct keyword fetch:', error);
-        } finally {
-          setDirectLoading(false);
-        }
-      };
-
-      fetchKeywords();
+      fetchKeywordsWithUsage(activeCategory.dbValue);
     }
-  }, [activeTab, activeCategory]);
+  }, [activeTab, activeCategory, fetchKeywordsWithUsage]);
 
   // Reset search when tab changes
   useEffect(() => {
@@ -401,14 +325,15 @@ export default function ManageKeywords() {
                 className="space-y-4"
               >
                 {/* Search and Add Controls */}
-                <div className="flex justify-between items-center gap-4">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div className="flex items-center space-x-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder={`Search ${category.label.toLowerCase()}...`}
+                      type="search"
+                      placeholder={`Search ${activeCategory?.label.toLowerCase()}...`}
+                      className="pl-8"
                       value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      onChange={handleSearchChange}
                     />
                   </div>
                   <Button onClick={() => setIsAddDialogOpen(true)}>

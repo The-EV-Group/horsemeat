@@ -17,7 +17,7 @@ const options = {
 // Process arguments
 for (let i = 0; i < args.length; i++) {
   const arg = args[i].toLowerCase();
-  
+
   if (arg === '--batch' && i + 1 < args.length) {
     options.batchSize = parseInt(args[i + 1], 10);
     i++;
@@ -64,7 +64,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Function to link contractors to keywords with optimized batch processing
 async function linkContractorsToKeywords(contractors, keywordMap, options) {
   console.log(`Starting contractor-keyword linking for ${contractors.length} contractors...`);
-  
+
   // Track results
   const results = {
     totalContractors: contractors.length,
@@ -74,7 +74,7 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
     failedLinks: 0,
     errors: []
   };
-  
+
   // Define the category mappings
   const categories = [
     { source: 'job_titles', target: 'job_title' },
@@ -83,35 +83,35 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
     { source: 'certifications', target: 'certification' },
     { source: 'companies', target: 'company' }
   ];
-  
+
   // Collect all links first
   const allLinks = [];
-  
+
   console.log('Collecting all contractor-keyword links...');
-  
+
   for (const contractor of contractors) {
     const contractorId = contractor.id;
     const sourceData = contractor.sourceData;
     const contractorName = sourceData.full_name || 'Unknown';
-    
+
     // Track processed keyword IDs for this contractor to avoid duplicates
     const processedKeywordIds = new Set();
-    
+
     // Process each category
     for (const category of categories) {
       const keywords = sourceData[category.source] || [];
-      
+
       if (options.debug && keywords.length > 0) {
         console.log(`Processing ${keywords.length} ${category.source} for ${contractorName}`);
       }
-      
+
       for (const keyword of keywords) {
         if (keyword && keyword.trim()) {
           const normalizedKeyword = keyword.trim();
           const key = `${normalizedKeyword.toLowerCase()}:${category.target}`;
-          
+
           const keywordId = keywordMap.get(key);
-          
+
           if (keywordId && !processedKeywordIds.has(keywordId)) {
             allLinks.push({
               contractor_id: contractorId,
@@ -125,17 +125,17 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
         }
       }
     }
-    
+
     results.processedContractors++;
-    
+
     // Log progress every 10 contractors
     if (results.processedContractors % 10 === 0 || options.debug) {
       console.log(`Processed ${results.processedContractors}/${contractors.length} contractors, found ${allLinks.length} links so far`);
     }
   }
-  
+
   console.log(`\nCollected ${allLinks.length} total links from ${results.processedContractors} contractors`);
-  
+
   if (options.test) {
     console.log('Test mode: Not inserting links into database');
     return {
@@ -143,16 +143,16 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
       successfulLinks: allLinks.length
     };
   }
-  
+
   // First, clear existing links to avoid duplicates
   console.log('Clearing existing contractor-keyword links...');
-  
+
   try {
     const { error: deleteError } = await supabase
       .from('contractor_keyword')
       .delete()
       .neq('contractor_id', 'dummy'); // Delete all rows
-      
+
     if (deleteError) {
       console.error('Error clearing existing links:', deleteError);
       results.errors.push({
@@ -169,23 +169,23 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
       error: error.message
     });
   }
-  
+
   // Insert links in batches
   console.log(`Inserting ${allLinks.length} links in batches of ${options.batchSize}...`);
-  
+
   for (let i = 0; i < allLinks.length; i += options.batchSize) {
     const batch = allLinks.slice(i, i + options.batchSize);
     const batchNumber = Math.floor(i / options.batchSize) + 1;
     const totalBatches = Math.ceil(allLinks.length / options.batchSize);
-    
+
     console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} links)...`);
-    
+
     try {
       const { data, error } = await supabase
         .from('contractor_keyword')
         .insert(batch)
         .select();
-      
+
       if (error) {
         console.error(`Error inserting batch ${batchNumber}:`, error);
         results.failedLinks += batch.length;
@@ -196,7 +196,7 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
       } else {
         console.log(`Successfully inserted batch ${batchNumber} (${data.length} links)`);
         results.successfulLinks += data.length;
-        
+
         // Verify the batch was inserted correctly
         if (data.length !== batch.length) {
           console.warn(`Warning: Only ${data.length} out of ${batch.length} links were inserted in batch ${batchNumber}`);
@@ -211,7 +211,7 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
       });
     }
   }
-  
+
   return results;
 }
 
@@ -219,53 +219,53 @@ async function linkContractorsToKeywords(contractors, keywordMap, options) {
 async function runLinking(options) {
   try {
     console.log('Starting contractor-keyword linking process...');
-    
+
     // Read the imported contractors file
     const contractorsFile = path.resolve(process.cwd(), 'imported_contractors.json');
-    
+
     if (!fs.existsSync(contractorsFile)) {
       throw new Error('Could not find imported_contractors.json file. Run import-contractors-only.cjs first.');
     }
-    
+
     console.log(`Reading contractors from: ${contractorsFile}`);
-    
+
     const contractorsContent = fs.readFileSync(contractorsFile, 'utf8');
     const contractors = JSON.parse(contractorsContent);
-    
+
     console.log(`Found ${contractors.length} imported contractors`);
-    
+
     // Read the keyword map file
     const keywordMapFile = path.resolve(process.cwd(), 'keyword_map.json');
-    
+
     if (!fs.existsSync(keywordMapFile)) {
       throw new Error('Could not find keyword_map.json file. Run import-keywords.cjs first.');
     }
-    
+
     console.log(`Reading keyword map from: ${keywordMapFile}`);
-    
+
     const keywordMapContent = fs.readFileSync(keywordMapFile, 'utf8');
     const keywordMapArray = JSON.parse(keywordMapContent);
     const keywordMap = new Map(keywordMapArray);
-    
+
     console.log(`Found ${keywordMap.size} keywords in map`);
-    
+
     // Run the linking process
     const result = await linkContractorsToKeywords(contractors, keywordMap, options);
-    
+
     // Log the results
     console.log('\nContractor-keyword linking completed!');
     console.log(`Processed contractors: ${result.processedContractors}/${result.totalContractors}`);
     console.log(`Total links: ${result.totalLinks}`);
     console.log(`Successful links: ${result.successfulLinks}`);
     console.log(`Failed links: ${result.failedLinks}`);
-    
+
     if (result.errors.length > 0) {
       console.log('\nErrors:');
       result.errors.forEach((error, index) => {
         console.log(`${index + 1}. ${error.batch ? `Batch ${error.batch}` : error.phase}: ${error.error}`);
       });
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error running contractor-keyword linking:', error);
